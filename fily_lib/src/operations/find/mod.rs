@@ -1,0 +1,311 @@
+use std::{path::{Path, PathBuf}, error::Error, fs::canonicalize, convert::TryInto};
+use walkdir::WalkDir;
+#[allow(unused_imports)]
+use log::{trace, debug, info, warn, error};
+
+mod condition;
+pub use condition::Condition;
+
+/// Stores options for `find`
+///
+/// You can instantiate this struct directly but I recommend
+/// using `FindOptionsBuilder`. It provides a couple nice helper functions
+/// for creating `Condition`s
+#[derive(Clone, Debug)]
+pub struct FindOptions<'a> {
+    pub options: Vec<Condition<SearchCriteria<'a>>>,
+    pub max_num_results: usize,
+    pub max_search_depth: usize,
+    pub min_depth_from_start: usize,
+    pub ignore: Option<Ignore>,
+    pub ignore_hidden_files: bool,
+    pub follow_symlinks: bool,
+}
+
+impl<'a> Default for FindOptions<'a> {
+    fn default() -> Self {
+        FindOptions {
+            options: Vec::new(),
+            max_num_results: usize::MAX,
+            max_search_depth: usize::MAX,
+            min_depth_from_start: 0,
+            ignore: None,
+            ignore_hidden_files: false,
+            follow_symlinks: false,
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct FindOptionsBuilder<'a> {
+    find_options: FindOptions<'a>
+}
+
+impl<'a> FindOptionsBuilder<'a> {
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    #[inline]
+    pub fn build(self) -> FindOptions<'a> {
+        self.find_options
+    }
+
+    #[inline]
+    pub fn add_condition(&mut self, condition: Condition<SearchCriteria<'a>>) -> &mut Self {
+        self.find_options.options.push(condition);
+        self
+    }
+
+    #[inline]
+    pub fn add_conditions(&mut self, mut conditions: Vec<Condition<SearchCriteria<'a>>>) -> &mut Self {
+        self.find_options.options.append(&mut conditions);
+        self
+    }
+
+    /// Adds a condition that requires all of the search criterias in `search_criterias` to match
+    pub fn add_all_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+        if search_criterias.is_empty() {
+            return self;
+        }
+
+        let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
+
+        for criteria in search_criterias.into_iter() {
+            option = Box::from(Condition::And(Box::from(Condition::Value(criteria)), option));
+        }
+
+        self.find_options.options.push(*option);
+        self
+    }
+
+    /// Adds a condition that requires any (at least one) of the search criterias in `search_criterias` to match
+    pub fn add_any_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+        if search_criterias.is_empty() {
+            return self;
+        }
+
+        let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
+
+        for criteria in search_criterias.into_iter() {
+            option = Box::from(Condition::Or(Box::from(Condition::Value(criteria)), option));
+        }
+
+        self.find_options.options.push(*option);
+        self
+    }
+
+    /// Adds a condition that requires none of the search criterias in `search_criterias` to match
+    pub fn add_nothing_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+        if search_criterias.is_empty() {
+            return self;
+        }
+
+        let mut option = Box::from(Condition::Not(Box::from(Condition::Value(search_criterias.remove(0)))));
+
+        for criteria in search_criterias.into_iter() {
+            option = Box::from(Condition::And(Box::from(Condition::Not(Box::from(Condition::Value(criteria)))), option));
+        }
+
+        self.find_options.options.push(*option);
+        self
+    }
+
+    #[inline]
+    pub fn add_condition_from_str(&mut self, condition_str: &str) -> Result<&mut Self, Box<dyn Error>> {
+        self.find_options.options.push(condition_str.try_into()?);
+        Ok(self)
+    }
+
+    #[inline]
+    pub fn set_max_num_results(&mut self, max_num_results: usize) -> &mut Self {
+        self.find_options.max_num_results = max_num_results;
+        self
+    }
+
+    #[inline]
+    pub fn set_max_search_depth(&mut self, max_search_depth: usize) -> &mut Self {
+        self.find_options.max_search_depth = max_search_depth;
+        self
+    }
+
+    #[inline]
+    pub fn set_min_depth_from_start(&mut self, min_depth_from_start: usize) -> &mut Self {
+        self.find_options.min_depth_from_start = min_depth_from_start;
+        self
+    }
+
+    #[inline]
+    pub fn set_ignored_files(&mut self, ignored_files: Ignore) -> &mut Self {
+        self.find_options.ignore = Some(ignored_files);
+        self
+    }
+
+    #[inline]
+    pub fn set_ignore_hidden_files(&mut self, ignore_hidden_files: bool) -> &mut Self {
+        self.find_options.ignore_hidden_files = ignore_hidden_files;
+        self
+    }
+
+    #[inline]
+    pub fn set_follow_symlinks(&mut self, follow_symlinks: bool) -> &mut Self {
+        self.find_options.follow_symlinks = follow_symlinks;
+        self
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum SearchCriteria<'a> {
+    Filename(Filename<'a>),
+    Filesize(Filesize),
+    FilePath(FilePath<'a>),
+    FilenameRegex(&'a regex::Regex),
+    Modified(Modified),
+    Accessed(Accessed),
+    Created(Created)
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Filename<'a> {
+    Exact(&'a str),
+    Contains(&'a str),
+}
+
+/// Filesize is in bytes
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Filesize {
+    Exact(u64),
+    Over(u64),
+    Under(u64),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum FilePath<'a> {
+    Exact(&'a str),
+    Contains(&'a str),
+}
+
+// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Modified {
+    At(i64),
+    Before(i64),
+    After(i64),
+}
+
+// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Accessed {
+    At(i64),
+    Before(i64),
+    After(i64),
+}
+
+// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Created {
+    At(i64),
+    Before(i64),
+    After(i64),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Ignore {
+    Files,
+    Folders,
+}
+
+/// Finds files or directories that fit all of the criteria
+/// 
+/// The returned `Vec` can be empty if nothing was found
+pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions<'_>) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+    let paths_to_search_in = {
+        let mut paths_to_search_in_canonicalized = Vec::with_capacity(paths_to_search_in.len());
+
+        for path in paths_to_search_in {
+            paths_to_search_in_canonicalized.push(match canonicalize(path) {
+                Ok(path) => path,
+                Err(e) => {
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    continue;
+                }
+            });
+        }
+
+        paths_to_search_in_canonicalized
+    };
+
+    trace!("find paths_to_search_in: {:?} find_options: {:?}", paths_to_search_in, find_options);
+
+    let mut results = Vec::new();
+
+    'outer: for path in paths_to_search_in {
+        let dir_iterator = WalkDir::new(&path)
+            .min_depth(find_options.min_depth_from_start)
+            .max_depth(find_options.max_search_depth)
+            .follow_links(find_options.follow_symlinks)
+            .into_iter()
+            .filter(|entry| {
+                match entry {
+                    Ok(current_entry) => {
+                        if let Some(ignore) = find_options.ignore {
+                            let file_type = current_entry.file_type();
+                            match ignore {
+                                Ignore::Files => if file_type.is_file() {
+                                    return false;
+                                }
+                                Ignore::Folders => if file_type.is_dir() {
+                                    return false;
+                                }
+                            };
+                        } else if find_options.ignore_hidden_files {
+                            match current_entry.file_name().to_str() {
+                                Some(name) => if name.starts_with('.') {
+                                    return false;
+                                }
+                                // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
+                                None => {},
+                            };
+                        }
+
+                        true
+                    }
+                    Err(e) => {
+                        info!("Error accessing a file {} ignoring it", e);
+                        false
+                    }
+                }
+            });
+
+        'inner: for entry in dir_iterator {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(e) => {
+                    warn!("A file that produced an error was still there after it got filtered out earlier {:?} {} ignoring this file", path.display(), e);
+                    continue;
+                }
+            };
+
+            for option in &find_options.options {
+                match option.evaluate(&entry.path()) {
+                    Ok(matches) => if !matches {
+                        continue 'inner;
+                    }
+                    Err(_) => continue 'inner,
+                };
+            }
+
+            results.push(entry.into_path());
+
+            if results.len() == find_options.max_num_results {
+                debug!("Max amount of results ({}) reached. Exiting early", find_options.max_num_results);
+                break 'outer;
+            }
+        }
+    }
+
+    debug!("Found {} files", results.len());
+
+    Ok(results)
+}

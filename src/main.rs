@@ -1,0 +1,585 @@
+#![warn(clippy::cargo, clippy::pedantic)]
+#![warn(rust_2018_idioms)]
+
+use std::{error::Error, io::{self, stdin, BufRead}, ffi::OsStr};
+use clap::{crate_name, crate_version, App, AppSettings, Arg, SubCommand};
+use regex::Regex;
+#[allow(unused_imports)]
+use log::{trace, debug, info, warn, error};
+
+use fily_lib::operations::{
+    rename::rename_files,
+    duplicates::{find_duplicate_files, find_duplicate_files_hash},
+    find::{find, FindOptionsBuilder, Filename, Filesize, FilePath, Ignore, Condition, SearchCriteria},
+    move_files::move_files,
+    similar_images::{find_similar_images, SimilarImagesOptions, HashAlg, FilterType},
+    check_image_formats::check_image_formats,
+};
+
+// TODO?: create a "create_file" module? How would that work? Naming? Contents?
+// TODO?: create "fill_file_with" module? what contents? where do we get them from?
+// TODO: find
+//       * implement Created, Modified, Accessed options
+//       * add TryFrom<&str> for Condition<SearchCriteria<'a>> so you're able to make arbitrary combinations of conditions. Need a parser for that?
+//       * add option to search for stuff IN the file?
+//       * --exec and --exec_dir commands?
+//       * add only_return_directories flag? As in don't return the actual file but the directory it's in. This could enable some short circuting
+//       * max_num_results_per_folder option? do we include the results in subfolders or for every individual folder?
+//       * add IsFile and IsFolder SearchCriteria?
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let app = App::new(crate_name!())
+        .about("Does stuff with files")
+        .version(crate_version!())
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::DeriveDisplayOrder)
+        .setting(AppSettings::WaitOnError)
+        .setting(AppSettings::VersionlessSubcommands)
+        .arg(
+            Arg::with_name("log_level")
+                .value_name("log_level")
+                .default_value("off")
+                .possible_values(&["off", "trace", "debug", "info", "warn", "error"])
+                .env("FILY_LOGLEVEL")
+                .short("l")
+                .long("log_level")
+                .help("Sets the loglevel")
+        )
+        .arg(
+            Arg::with_name("fail_on_no_logging")
+                .env("FILY_STRICT_LOGGING")
+                .takes_value(false)
+                .short("s")
+                .long("strict_logging")
+                .help("Don't run if logging fails for some reason and panic instead before doing anything. This is a failsafe if you need to make sure that actions are always recorded. This can also be set by creating an environment variable called FILY_STRICT_LOGGING")
+        )
+        .subcommand(
+            SubCommand::with_name("find")
+                .about("Finds files and folders")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+                .arg(
+                    Arg::with_name("paths_to_search_in")
+                        .value_name("paths_to_search_in")
+                        .required(true)
+                        .multiple(true)
+                        .short("p")
+                        .long("paths_to_search_in")
+                        .help("Search starts at this/these path(s). If the path points to a file instead of a folder it will find that file and only that file for that path")
+                )
+                .arg(
+                    Arg::with_name("filename_exact")
+                        .value_name("filename_exact")
+                        .conflicts_with_all(&["filename_contains", "filename_regex", "filename_regex_ignore"])
+                        .short("e")
+                        .long("filename_exact")
+                        .help("A file/folder name has to match this exactly to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("filename_contains")
+                        .value_name("filename_contains")
+                        .multiple(true)
+                        .short("c")
+                        .long("filename_contains")
+                        .help("A filename has to contain all of the passed strings to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("path_contains")
+                        .value_name("path_contains")
+                        .multiple(true)
+                        .short("n")
+                        .long("path_contains")
+                        .help("The path to a file has to contain all of the passed strings to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("path_exact")
+                        .value_name("path_exact")
+                        .multiple(true)
+                        .short("t")
+                        .long("path_exact")
+                        .help("A file's path has to match this path exactly to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("filename_regex")
+                        .value_name("filename_regex")
+                        .multiple(true)
+                        .short("x")
+                        .long("filename_regex")
+                        .help("A filename has to match all of the passed regexes to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("filename_regex_ignore")
+                        .value_name("filename_regex_ignore")
+                        .multiple(true)
+                        .short("g")
+                        .long("filename_regex_ignore")
+                        .help("A filename has to NOT match the passed regexes to be considered a match")
+                )
+                .arg(
+                    Arg::with_name("filesize_exact")
+                        .value_name("filesize_exact")
+                        .conflicts_with_all(&["filesize_over", "filesize_under"])  
+                        .validator(|input| {
+                            input.parse::<u64>().map_err(|_| "filesize_exact has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("s")
+                        .long("filesize_exact")
+                        .help("A file has to have exactly the number of bytes that were passed")
+                )
+                .arg(
+                    Arg::with_name("filesize_over")
+                        .value_name("filesize_over")
+                        .validator(|input| {
+                            input.parse::<u64>().map_err(|_| "filesize_over has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("o")
+                        .long("filesize_over")
+                        .help("A file has to have more bytes than the amount that was passed")
+                )
+                .arg(
+                    Arg::with_name("filesize_under")
+                        .value_name("filesize_under")
+                        .validator(|input| {
+                            input.parse::<u64>().map_err(|_| "filesize_under has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("u")
+                        .long("filesize_under")
+                        .help("A file has to have less bytes than the amount that was passed")
+                )
+                .arg(
+                    Arg::with_name("max_num_results")
+                        .value_name("max_num_results")
+                        .validator(|input| {
+                            input.parse::<usize>().map_err(|_| "max_num_results has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("r")
+                        .long("max_num_results")
+                        .help("Limits the amount of files returned. Default is unlimited")
+                )
+                .arg(
+                    Arg::with_name("max_search_depth")
+                        .value_name("max_search_depth")
+                        .validator(|input| {
+                            input.parse::<usize>().map_err(|_| "max_search_depth has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("d")
+                        .long("max_search_depth")
+                        .help("Limits how many subfolders deep the search goes. Default is unlimited")
+                )
+                .arg(
+                    Arg::with_name("min_depth_from_start")
+                        .value_name("min_depth_from_start")
+                        .default_value("0")
+                        .hide_default_value(true)
+                        .validator(|input| {
+                            input.parse::<usize>().map_err(|_| "min_depth_from_start has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("m")
+                        .long("min_depth_from_start")
+                        .help("All folders that are (starting from the start_path) less than this number deep are ignored. Default is 0 (nothing is ignored)")
+                )
+                .arg(
+                    Arg::with_name("ignore")
+                        .value_name("ignore")
+                        .possible_values(&["files", "folders"])
+                        .short("i")
+                        .long("ignore")
+                        .help("Ignores either all files or folders")
+                )
+                .arg(
+                    Arg::with_name("ignore_hidden_files")
+                        .short("h")
+                        .long("ignore_hidden_files")
+                        .help("If this flag is set all files that start with a '.' (a dot) will be ignored")
+                )
+                .arg(
+                    Arg::with_name("follow_symlinks")
+                        .short("f")
+                        .long("follow_symlinks")
+                        .help("If this flag is set any symlinks will be followed")
+                )
+                .arg(
+                    Arg::with_name("output_separator")
+                        .value_name("output_separator")
+                        .default_value("\n")
+                        .hide_default_value(true)
+                        .env("FILY_OUTPUT_SEPARATOR")
+                        .short("a")
+                        .long("output_separator")
+                        .help("Sets what is used to separate the paths to files that were found. Defaults to \\n")
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("rename")
+                .about("Renames files and folders. New name is produced with a template you provide")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+                .arg(
+                    Arg::with_name("new_filename_template")
+                        .required(true)
+                        .value_name("new_filename_template")
+                        .short("t")
+                        .long("template")
+                        .help("Template which will be used to rename the files")
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("duplicates")
+                .about("Finds duplicate files and prints the paths to them in pairs")
+                // .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+                .arg(
+                    Arg::with_name("use_hash_version")
+                        .short("h")
+                        .long("use_hash_version")
+                        .help("Hashes the contents to a crc32 and compares the hashes instead of comparing the bytes directly. This can reduce the required amount of RAM significantly")
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("move")
+                .about("Moves files and folders")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+                .arg(
+                    Arg::with_name("move_to")
+                        .value_name("move_to")
+                        .required(true)
+                        .short("t")
+                        .long("move_to")
+                        .help("A path to which the files get moved to. Has to point to a folder")
+                )
+                .arg(
+                    Arg::with_name("no_prompt")
+                        .short("n")
+                        .long("no_prompt")
+                        .help("Don't create a prompt asking if you're sure")   
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("similar_images")
+                .about("Finds similar images")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+                .arg(
+                    Arg::with_name("hash_alg")
+                        .value_name("hash_alg")
+                        .default_value("gradient")
+                        .possible_values(&["mean", "gradient", "vertgradient", "doublegradient", "blockhash"])
+                        .short("h")
+                        .long("hash_alg")
+                        .help("Sets the hashing algorithm")
+                )
+                .arg(
+                    Arg::with_name("resize_filter")
+                        .value_name("resize_filter")
+                        .default_value("lanczos3")
+                        .possible_values(&["nearest", "triangle", "catmullrom", "gaussian", "lanczos3"])
+                        .short("r")
+                        .long("resize_filter")
+                        .help("Sets the filter used to resize images during hashing. This has no effect if the blockhash algorithm is being used")
+                )
+                .arg(
+                    Arg::with_name("hash_width")
+                        .value_name("hash_width")
+                        .validator(|input| {
+                            input.parse::<u32>().map_err(|_| "hash_width has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .default_value("8")
+                        .requires("hash_height")
+                        .short("w")
+                        .long("hash_width")
+                        .help("Sets the hash width. Higher numbers create diminishing returns")
+                )
+                .arg(
+                    Arg::with_name("hash_height")
+                        .value_name("hash_height")
+                        .validator(|input| {
+                            input.parse::<u32>().map_err(|_| "hash_height has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .default_value("8")
+                        .requires("hash_width")
+                        .short("h")
+                        .long("hash_height")
+                        .help("Sets the hash height. Higher numbers create diminishing returns")
+                )
+                .arg(
+                    Arg::with_name("threshold")
+                        .value_name("threshold")
+                        .default_value("31")
+                        .validator(|input| {
+                            input.parse::<u32>().map_err(|_| "threshold has to be a valid positive number".to_string())?;
+                            Ok(())
+                        })
+                        .short("t")
+                        .long("threshold")
+                        .help("Sets how close the images have to be to another. Values of around 31 seem to work decently well")
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("check_image_formats")
+                .about("Finds images which extension do not match their actual format. This can produce false positives on files that aren't images, be sure to check the output")
+                .setting(AppSettings::DeriveDisplayOrder)
+                .setting(AppSettings::WaitOnError)
+                .setting(AppSettings::UnifiedHelpMessage)
+        ).get_matches();
+
+    if let Err(e) = setup_logger(app.value_of("log_level").unwrap()) {
+        eprintln!("Error while setting up logging {}", e);
+
+        if app.is_present("fail_on_no_logging") {
+            panic!("Failed to set up logging");
+        }
+    }
+
+    match app.subcommand() {
+        ("find", Some(args)) => {
+            let paths_to_search_in: Vec<&OsStr> = args.values_of_os("paths_to_search_in").unwrap().collect();
+
+            let mut find_options_builder = FindOptionsBuilder::new();
+
+            if args.is_present("filename_exact") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Filename(Filename::Exact(args.value_of("filename_exact").unwrap())))
+                );
+            } else if args.is_present("filename_contains") {
+                let criteria: Vec<SearchCriteria<'_>> =
+                    args.values_of("filename_contains").unwrap().map(|substring| SearchCriteria::Filename(Filename::Contains(substring))).collect();
+
+                find_options_builder.add_all_of_condition(criteria);
+            }
+
+            if args.is_present("filesize_over") && args.is_present("filesize_under") {
+                let over_this_size = args.value_of("filesize_over").unwrap().parse().unwrap();
+                let under_this_size = args.value_of("filesize_under").unwrap().parse().unwrap();
+
+                if over_this_size >= under_this_size {
+                    return Err(Box::from("filesize_over has to be less than filesize_under"));
+                }
+
+                find_options_builder.add_condition(
+                    Condition::And(
+                        Box::from(Condition::Value(SearchCriteria::Filesize(Filesize::Over(over_this_size)))),
+                        Box::from(Condition::Value(SearchCriteria::Filesize(Filesize::Under(under_this_size))))
+                    )
+                );
+            } else if args.is_present("filesize_exact") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Filesize(Filesize::Exact(args.value_of("filesize_exact").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("filesize_over") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Filesize(Filesize::Over(args.value_of("filesize_over").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("filesize_under") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Filesize(Filesize::Under(args.value_of("filesize_under").unwrap().parse().unwrap())))
+                );
+            }
+
+            let path_exact: Vec<SearchCriteria<'_>> =
+                args.values_of("path_exact").unwrap_or_default().map(|path| SearchCriteria::FilePath(FilePath::Exact(path))).collect();
+            if !path_exact.is_empty() {
+                find_options_builder.add_all_of_condition(path_exact);
+            }
+
+            let path_contains: Vec<SearchCriteria<'_>> =
+                args.values_of("path_contains").unwrap_or_default().map(|substring| SearchCriteria::FilePath(FilePath::Contains(substring))).collect();
+            if !path_contains.is_empty() {
+                find_options_builder.add_all_of_condition(path_contains);
+            }
+
+            let regex_match: Vec<Regex> =
+                args.values_of("filename_regex").unwrap_or_default().map(|regex_str| Regex::new(regex_str).expect("invalid regex")).collect();
+            if !regex_match.is_empty() {
+                let regex_match_criteria = regex_match.iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
+
+                find_options_builder.add_all_of_condition(regex_match_criteria);
+            }
+
+            let regex_ignore: Vec<Regex> =
+                args.values_of("filename_regex_ignore").unwrap_or_default().map(|regex_str| Regex::new(regex_str).expect("invalid regex")).collect();
+            if !regex_ignore.is_empty() {
+                let regex_ignore_criteria = regex_ignore.iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
+
+                find_options_builder.add_nothing_of_condition(regex_ignore_criteria);
+            }
+
+            if args.is_present("max_num_results") {
+                find_options_builder.set_max_num_results(args.value_of("max_num_results").unwrap().parse().unwrap());
+            }
+
+            if args.is_present("max_search_depth") {
+                find_options_builder.set_max_search_depth(args.value_of("max_search_depth").unwrap().parse().unwrap());
+            }
+
+            find_options_builder.set_min_depth_from_start(args.value_of("min_depth_from_start").unwrap().parse().unwrap());
+
+            if args.is_present("ignore") {
+                find_options_builder.set_ignored_files(
+                    match args.value_of("ignore").unwrap() {
+                        "files" => Ignore::Files,
+                        "folders" => Ignore::Folders,
+                        _ => unreachable!("Someone messed with the possible values"),
+                    }
+                );
+            }
+
+            find_options_builder.set_ignore_hidden_files(args.is_present("ignore_hidden_files"));
+
+            find_options_builder.set_follow_symlinks(args.is_present("follow_symlinks"));
+            
+            let find_options = find_options_builder.build();
+            let output_separator = args.value_of("output_separator").unwrap();
+
+            println!("{}", find(&paths_to_search_in, &find_options)?
+                .iter()
+                .map(|path| path.display().to_string())
+                .collect::<Vec<String>>()
+                .join(output_separator)
+            );
+        }
+        ("rename", Some(args)) => {
+            let files_to_rename = get_stdin_as_lines()?;
+            let new_filename_template = args.value_of("new_filename_template").unwrap();
+
+            rename_files(&files_to_rename, new_filename_template)?;
+        }
+        ("duplicates", Some(args)) => {
+            let files_to_check = get_stdin_as_lines()?;
+            let use_hash_version = args.is_present("use_hash_version");
+
+            if use_hash_version {
+                println!("{}", find_duplicate_files_hash(&files_to_check)?
+                    .iter()
+                    .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+                );
+            } else {
+                println!("{}", find_duplicate_files(&files_to_check)?
+                    .iter()
+                    .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+                );
+            }
+        }
+        ("move", Some(args)) => {
+            let files_to_move = get_stdin_as_lines()?;
+            let move_to = args.value_of("move_to").unwrap();
+            let you_sure_prompt = !args.is_present("no_prompt");
+
+            move_files(move_to, &files_to_move, you_sure_prompt)?;
+        }
+        ("similar_images", Some(args)) => {
+            let images_to_check = get_stdin_as_lines()?;
+            let mut similar_images_options: SimilarImagesOptions = Default::default();
+
+            similar_images_options.hash_alg = match args.value_of("hash_alg").unwrap() {
+                "mean" => HashAlg::Mean,
+                "gradient" => HashAlg::Gradient,
+                "vertgradient" => HashAlg::VertGradient,
+                "doublegradient" => HashAlg::DoubleGradient,
+                "blockhash" => HashAlg::Blockhash,
+                _ => unreachable!("Someone messed with the possible values")
+            };
+
+            similar_images_options.filter_type = match args.value_of("resize_filter").unwrap() {
+                "nearest" => FilterType::Nearest,
+                "triangle" => FilterType::Triangle,
+                "catmullrom" => FilterType::CatmullRom,
+                "gaussian" => FilterType::Gaussian,
+                "lanczos3" => FilterType::Lanczos3,
+                _ => unreachable!("Someone messed with the possible values")
+            };
+
+            if args.is_present("hash_width") {
+                let hash_width = args.value_of("hash_width").unwrap().parse().unwrap();
+                let hash_height = args.value_of("hash_height").unwrap().parse().unwrap();
+
+                similar_images_options.hash_size = (hash_width, hash_height);
+            }
+
+            similar_images_options.threshold = args.value_of("threshold").unwrap().parse().unwrap();
+
+            println!("{}", find_similar_images(&images_to_check, similar_images_options)?
+                .iter()
+                .map(|similar_images| format!("{}, {}", similar_images.0.display(), similar_images.1.display()))
+                .collect::<Vec<String>>()
+                .join("\n")
+            );
+        }
+        ("check_image_formats", _) => {
+            let images_to_check = get_stdin_as_lines()?;
+
+            println!("{}", check_image_formats(&images_to_check)?
+                .iter()
+                .map(|wrong_format_image| format!("{}, {}, {}", wrong_format_image.0.display(), wrong_format_image.1, wrong_format_image.2))
+                .collect::<Vec<String>>()
+                .join("\n")
+            );
+        }
+        _ => eprintln!("Unknown subcommand"),
+    };
+
+    Ok(())
+}
+
+fn setup_logger(log_level: &str) -> Result<(), Box<dyn Error>> {
+    let log_level = match log_level {
+        "off" => log::LevelFilter::Off,
+        "error" => log::LevelFilter::Error,
+        "warn" => log::LevelFilter::Warn,
+        "info" => log::LevelFilter::Info,
+        "debug" => log::LevelFilter::Debug,
+        "trace" => log::LevelFilter::Trace,
+        _ => return Err(Box::from("Unknown loglevel")),
+    };
+
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Utc::now().to_rfc3339(),
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(log_level)
+        .chain(fern::log_file("fily.log")?)
+        .apply()?;
+
+    Ok(())
+}
+
+fn get_stdin_as_lines() -> Result<Vec<String>, io::Error> {
+    let mut input = Vec::new();
+
+    for line in stdin().lock().lines() {
+        input.push(line?);
+    }
+
+    input.shrink_to_fit();
+
+    Ok(input)
+}
