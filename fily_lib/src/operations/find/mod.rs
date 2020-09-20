@@ -299,6 +299,8 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
 
             break;
         }
+
+        results.append(&mut matching_files);
     }
 
     debug!("Found {} files", results.len());
