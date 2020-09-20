@@ -112,6 +112,8 @@ impl<'a> FindOptionsBuilder<'a> {
         self
     }
 
+    /// Adds a condition from a `str`. This can fail.
+    /// Also this isn't actually implemented right now so it'll just panic if you call this
     #[inline]
     pub fn add_condition_from_str(&mut self, condition_str: &str) -> Result<&mut Self, Box<dyn Error>> {
         self.find_options.options.push(condition_str.try_into()?);
@@ -186,7 +188,7 @@ pub enum FilePath<'a> {
     Contains(&'a str),
 }
 
-// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+/// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Modified {
     At(i64),
@@ -194,7 +196,7 @@ pub enum Modified {
     After(i64),
 }
 
-// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+/// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Accessed {
     At(i64),
@@ -202,7 +204,7 @@ pub enum Accessed {
     After(i64),
 }
 
-// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+/// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Created {
     At(i64),
@@ -240,68 +242,62 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
 
     let mut results = Vec::new();
 
-    'outer: for path in paths_to_search_in {
+    for path in paths_to_search_in {
         let dir_iterator = WalkDir::new(&path)
             .min_depth(find_options.min_depth_from_start)
             .max_depth(find_options.max_search_depth)
             .follow_links(find_options.follow_symlinks)
             .into_iter()
-            .filter(|entry| {
-                match entry {
-                    Ok(current_entry) => {
-                        if let Some(ignore) = find_options.ignore {
-                            let file_type = current_entry.file_type();
-                            match ignore {
-                                Ignore::Files => if file_type.is_file() {
-                                    return false;
-                                }
-                                Ignore::Folders => if file_type.is_dir() {
-                                    return false;
-                                }
-                            };
-                        } else if find_options.ignore_hidden_files {
-                            match current_entry.file_name().to_str() {
-                                Some(name) => if name.starts_with('.') {
-                                    return false;
-                                }
-                                // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
-                                None => {},
-                            };
-                        }
-
-                        true
-                    }
-                    Err(e) => {
-                        info!("Error accessing a file {} ignoring it", e);
-                        false
-                    }
+            .filter_map(|entry| {
+                if let Err(e) = entry {
+                    info!("Error accessing a file {} ignoring it", e);
+                    return None;
                 }
+
+                let entry = entry.unwrap();
+
+                if let Some(ignore) = find_options.ignore {
+                    let file_type = entry.file_type();
+                    match ignore {
+                        Ignore::Files => if file_type.is_file() {
+                            return None;
+                        }
+                        Ignore::Folders => if file_type.is_dir() {
+                            return None;
+                        }
+                    };
+                }
+
+                if find_options.ignore_hidden_files {
+                    match entry.file_name().to_str() {
+                        Some(name) => if name.starts_with('.') {
+                            return None;
+                        }
+                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
+                        None => {},
+                    };
+                }
+
+                Some(entry)
             });
 
-        'inner: for entry in dir_iterator {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(e) => {
-                    warn!("A file that produced an error was still there after it got filtered out earlier {:?} {} ignoring this file", path.display(), e);
-                    continue;
-                }
-            };
+        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|entry| {
+                // Checks if all Conditions match the file
+                // If any do not match the file gets filtered out
+                find_options.options.iter().all(|option| option.evaluate(&entry.path()).unwrap_or(false))
+            })
+            .map(|entry| entry.into_path())
+            .collect();
 
-            for option in &find_options.options {
-                match option.evaluate(&entry.path()) {
-                    Ok(matches) => if !matches {
-                        continue 'inner;
-                    }
-                    Err(_) => continue 'inner,
-                };
-            }
+        if results.len() + matching_files.len() >= find_options.max_num_results {
+            // Shorten the vec in case there are too many items so we don't return more
+            // paths than we should
+            matching_files.truncate(find_options.max_num_results - results.len());
+            results.append(&mut matching_files);
 
-            results.push(entry.into_path());
+            debug!("Max amount of results ({}) reached. Exiting early", find_options.max_num_results);
 
-            if results.len() == find_options.max_num_results {
-                debug!("Max amount of results ({}) reached. Exiting early", find_options.max_num_results);
-                break 'outer;
-            }
+            break;
         }
     }
 
