@@ -157,7 +157,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
             }
         };
 
-        let last_access_time = FileTime::from_last_modification_time(&metadata).unix_seconds();
+        let last_access_time = FileTime::from_last_access_time(&metadata).unix_seconds();
 
         Ok(match *access_options {
             Accessed::At(at_this_time) => last_access_time == at_this_time,
@@ -175,7 +175,13 @@ impl<'a> Condition<SearchCriteria<'a>> {
             }
         };
 
-        let creation_time = FileTime::from_last_modification_time(&metadata).unix_seconds();
+        let creation_time = match FileTime::from_creation_time(&metadata){
+            Some(creation_time) => creation_time.unix_seconds(),
+            None => {
+                info!("Failed to get creation time of {:?} skipping file", path.display());
+                return Err(());
+            }
+        };
 
         Ok(match *creation_options {
             Created::At(at_this_time) => creation_time == at_this_time,
