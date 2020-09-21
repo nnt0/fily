@@ -311,14 +311,15 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                     };
                 }
 
-                Some(entry.into_path())
+                Some(entry)
             });
 
-        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|path| {
+        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|entry| {
                 // Checks if all Conditions match the file
                 // If any do not match the file gets filtered out
-                find_options.options.iter().all(|option| option.evaluate(path).unwrap_or(false))
+                find_options.options.iter().all(|option| option.evaluate(entry).unwrap_or(false))
             })
+            .map(|entry| entry.into_path())
             .collect();
 
         if results.len() + matching_files.len() >= find_options.max_num_results {
