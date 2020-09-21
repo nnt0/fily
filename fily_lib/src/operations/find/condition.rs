@@ -1,7 +1,8 @@
-use std::{fs::metadata, path::Path, convert::TryFrom};
+use std::convert::TryFrom;
 use super::{Filename, Filesize, FilePath, Modified, Accessed, Created, SearchCriteria};
 use regex::Regex;
 use filetime::FileTime;
+use walkdir::DirEntry;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -38,29 +39,28 @@ impl<'a> Condition<SearchCriteria<'a>> {
     /// Returns `Ok(true)` if it does and `Ok(false)` if it doesn't. If an error
     /// occured while trying to get info on the file it'll return `Err(())` and log
     /// the error (assuming logging is turned on)
-    pub fn evaluate(&self, path: &impl AsRef<Path>) -> Result<bool, ()> {
+    pub fn evaluate(&self, dir_entry: &DirEntry) -> Result<bool, ()> {
         // TODO: Maybe we should return an actual eror here?
         match self {
-            Self::And(condition1, condition2) => Ok(condition1.evaluate(path)? && condition2.evaluate(path)?),
-            Self::Not(condition) => Ok(!condition.evaluate(path)?),
-            Self::Or(condition1, condition2) => Ok(condition1.evaluate(path)? || condition2.evaluate(path)?),
+            Self::And(condition1, condition2) => Ok(condition1.evaluate(dir_entry)? && condition2.evaluate(dir_entry)?),
+            Self::Not(condition) => Ok(!condition.evaluate(dir_entry)?),
+            Self::Or(condition1, condition2) => Ok(condition1.evaluate(dir_entry)? || condition2.evaluate(dir_entry)?),
             Self::Value(search_criteria) => {
-                let path = path.as_ref();
-
                 Ok(match search_criteria {
-                    SearchCriteria::Filename(filename_options) => self.filename_matches(path, filename_options)?,
-                    SearchCriteria::Filesize(filesize_options) => self.filesize_matches(path, filesize_options)?,
-                    SearchCriteria::FilePath(filepath_options) => self.filepath_matches(path, filepath_options)?,
-                    SearchCriteria::FilenameRegex(filename_regex) => self.filename_regex_matches(path, filename_regex)?,
-                    SearchCriteria::Modified(modified_options) => self.modification_time_matches(path, modified_options)?,
-                    SearchCriteria::Accessed(access_options) => self.access_time_matches(path, access_options)?,
-                    SearchCriteria::Created(creation_options) => self.creation_time_matches(path, creation_options)?,
+                    SearchCriteria::Filename(filename_options) => self.filename_matches(dir_entry, filename_options)?,
+                    SearchCriteria::Filesize(filesize_options) => self.filesize_matches(dir_entry, filesize_options)?,
+                    SearchCriteria::FilePath(filepath_options) => self.filepath_matches(dir_entry, filepath_options)?,
+                    SearchCriteria::FilenameRegex(filename_regex) => self.filename_regex_matches(dir_entry, filename_regex)?,
+                    SearchCriteria::Modified(modified_options) => self.modification_time_matches(dir_entry, modified_options)?,
+                    SearchCriteria::Accessed(access_options) => self.access_time_matches(dir_entry, access_options)?,
+                    SearchCriteria::Created(creation_options) => self.creation_time_matches(dir_entry, creation_options)?,
                 })
             }
         }
     }
 
-    fn filename_matches(&self, path: &Path, filename_options: &Filename<'_>) -> Result<bool, ()> {
+    fn filename_matches(&self, dir_entry: &DirEntry, filename_options: &Filename<'_>) -> Result<bool, ()> {
+        let path = dir_entry.path();
         let filename = match path.file_name() {
             Some(filename_osstr) => match filename_osstr.to_str() {
                 Some(filename) => filename,
@@ -81,11 +81,11 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filesize_matches(&self, path: &Path, filesize_options: &Filesize) -> Result<bool, ()> {
-        let filesize = match metadata(path) {
+    fn filesize_matches(&self, dir_entry: &DirEntry, filesize_options: &Filesize) -> Result<bool, ()> {
+        let filesize = match dir_entry.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
-                info!("IO Error {:?} {:?} ignoring this file", e, path.display());
+                info!("IO Error {:?} {:?} ignoring this file", e, dir_entry.path().display());
                 return Err(());
             }
         };
@@ -97,7 +97,8 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filepath_matches(&self, path: &Path, filepath_options: &FilePath<'_>) -> Result<bool, ()> {
+    fn filepath_matches(&self, dir_entry: &DirEntry, filepath_options: &FilePath<'_>) -> Result<bool, ()> {
+        let path = dir_entry.path();
         let path = match path.as_os_str().to_str() {
             Some(path) => path,
             None => {
@@ -112,7 +113,8 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filename_regex_matches(&self, path: &Path, filename_regex: &Regex) -> Result<bool, ()> {
+    fn filename_regex_matches(&self, dir_entry: &DirEntry, filename_regex: &Regex) -> Result<bool, ()> {
+        let path = dir_entry.path();
         let filename = match path.file_name() {
             Some(filename_osstr) => match filename_osstr.to_str() {
                 Some(filename) => filename,
@@ -130,11 +132,11 @@ impl<'a> Condition<SearchCriteria<'a>> {
         Ok(filename_regex.is_match(filename))
     }
 
-    fn modification_time_matches(&self, path: &Path, modified_options: &Modified) -> Result<bool, ()> {
-        let metadata = match metadata(path) {
+    fn modification_time_matches(&self, dir_entry: &DirEntry, modified_options: &Modified) -> Result<bool, ()> {
+        let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
-                info!("Failed to get metadata of {:?} {} skipping entry", path.display(), e);
+                info!("Failed to get metadata of {:?} {} skipping entry", dir_entry.path().display(), e);
                 return Err(());
             }
         };
@@ -148,11 +150,11 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn access_time_matches(&self, path: &Path, access_options: &Accessed) -> Result<bool, ()> {
-        let metadata = match metadata(path) {
+    fn access_time_matches(&self, dir_entry: &DirEntry, access_options: &Accessed) -> Result<bool, ()> {
+        let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
-                info!("Failed to get metadata of {:?} {} skipping entry", path.display(), e);
+                info!("Failed to get metadata of {:?} {} skipping entry", dir_entry.path().display(), e);
                 return Err(());
             }
         };
@@ -166,11 +168,11 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn creation_time_matches(&self, path: &Path, creation_options: &Created) -> Result<bool, ()> {
-        let metadata = match metadata(path) {
+    fn creation_time_matches(&self, dir_entry: &DirEntry, creation_options: &Created) -> Result<bool, ()> {
+        let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
-                info!("Failed to get metadata of {:?} {} skipping entry", path.display(), e);
+                info!("Failed to get metadata of {:?} {} skipping entry", dir_entry.path().display(), e);
                 return Err(());
             }
         };
@@ -178,7 +180,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         let creation_time = match FileTime::from_creation_time(&metadata){
             Some(creation_time) => creation_time.unix_seconds(),
             None => {
-                info!("Failed to get creation time of {:?} skipping file", path.display());
+                info!("Failed to get creation time of {:?} skipping file", dir_entry.path().display());
                 return Err(());
             }
         };
