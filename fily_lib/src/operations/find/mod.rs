@@ -11,6 +11,27 @@ pub use condition::Condition;
 /// You can instantiate this struct directly but I recommend
 /// using `FindOptionsBuilder`. It provides a couple nice helper functions
 /// for creating `Condition`s
+///
+/// If you want to instantiate this directly you can use `Default::default()` which
+/// provides a config that matches anything. So you only have to change the options
+/// you care about
+///
+/// options: Contains a vec of Condition<SearchCriteria<'a>> with which you
+/// you can define what criteria a file should or should not match.
+/// I recommend reading the docs on `Condition` and `SearchCriteria`
+///
+/// max_num_results: limits the amount of paths returned
+///
+/// max_search_depth: limits how many subfolders deep it searches
+///
+/// min_depth_from_start: limits how many subfolders deep it should start searching. I recommend
+/// setting this lower than or equals to max_search_depth
+///
+/// ignore: used to either ignore all files or all folders
+///
+/// ignore_hidden_files: ignore all files that start with a dot
+///
+/// follow_symlinks: if it should follow any symlinks and search in there too
 #[derive(Clone, Debug)]
 pub struct FindOptions<'a> {
     pub options: Vec<Condition<SearchCriteria<'a>>>,
@@ -157,6 +178,9 @@ impl<'a> FindOptionsBuilder<'a> {
     }
 }
 
+/// Used to specify a criteria a file has to match
+///
+/// Intended to be used with `Condition`
 #[derive(Clone, Debug)]
 pub enum SearchCriteria<'a> {
     Filename(Filename<'a>),
@@ -189,6 +213,9 @@ pub enum FilePath<'a> {
 }
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+///
+/// The value it checks it against corresponds to the mtime field of stat on
+/// Unix platforms and the ftLastWriteTime field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Modified {
     At(i64),
@@ -197,6 +224,9 @@ pub enum Modified {
 }
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+///
+/// The value it checks it against corresponds to the atime field of stat on
+/// Unix platforms and the ftLastAccessTime field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Accessed {
     At(i64),
@@ -205,6 +235,9 @@ pub enum Accessed {
 }
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
+///
+/// The value it checks it against corresponds to the birthtime field of stat on
+/// Unix platforms and the ftCreationTime field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Created {
     At(i64),
@@ -278,15 +311,14 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                     };
                 }
 
-                Some(entry)
+                Some(entry.into_path())
             });
 
-        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|entry| {
+        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|path| {
                 // Checks if all Conditions match the file
                 // If any do not match the file gets filtered out
-                find_options.options.iter().all(|option| option.evaluate(&entry.path()).unwrap_or(false))
+                find_options.options.iter().all(|option| option.evaluate(path).unwrap_or(false))
             })
-            .map(|entry| entry.into_path())
             .collect();
 
         if results.len() + matching_files.len() >= find_options.max_num_results {
