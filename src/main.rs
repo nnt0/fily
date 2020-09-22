@@ -156,6 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .arg(
                     Arg::with_name("modified_at")
                         .value_name("modified_at")
+                        .conflicts_with_all(&["modified_before", "modified_after"])
                         .validator(|input| {
                             input.parse::<i64>().map_err(|_| "modified_at has to be a valid number".to_string())?;
                             Ok(())
@@ -191,6 +192,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .arg(
                     Arg::with_name("accessed_at")
                         .value_name("accessed_at")
+                        .conflicts_with_all(&["accessed_before", "accessed_after"])
                         .validator(|input| {
                             input.parse::<i64>().map_err(|_| "accessed_at has to be a valid number".to_string())?;
                             Ok(())
@@ -224,6 +226,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .arg(
                     Arg::with_name("created_at")
                         .value_name("created_at")
+                        .conflicts_with_all(&["created_before", "created_after"])
                         .validator(|input| {
                             input.parse::<i64>().map_err(|_| "created_at has to be a valid number".to_string())?;
                             Ok(())
