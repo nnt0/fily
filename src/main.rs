@@ -10,7 +10,7 @@ use log::{trace, debug, info, warn, error};
 use fily_lib::operations::{
     rename::rename_files,
     duplicates::{find_duplicate_files, find_duplicate_files_hash},
-    find::{find, FindOptionsBuilder, Filename, Filesize, FilePath, Ignore, Condition, SearchCriteria},
+    find::{find, FindOptionsBuilder, Filename, Filesize, FilePath, Modified, Accessed, Created, Ignore, Condition, SearchCriteria},
     move_files::move_files,
     similar_images::{find_similar_images, SimilarImagesOptions, HashAlg, FilterType},
     check_image_formats::check_image_formats,
@@ -18,8 +18,9 @@ use fily_lib::operations::{
 
 // TODO?: create a "create_file" module? How would that work? Naming? Contents?
 // TODO?: create "fill_file_with" module? what contents? where do we get them from?
+// TODO?: create a check_encoding module? checks if the input text (or text in file) has broken codepoints in it. take what encoding it is as input for each file?
+// TODO: actual error reporting on tokenizing rename template
 // TODO: find
-//       * implement Created, Modified, Accessed options
 //       * add TryFrom<&str> for Condition<SearchCriteria<'a>> so you're able to make arbitrary combinations of conditions. Need a parser for that?
 //       * add option to search for stuff IN the file?
 //       * --exec and --exec_dir commands?
@@ -151,6 +152,107 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .short("u")
                         .long("filesize_under")
                         .help("A file has to have less bytes than the amount that was passed")
+                )
+                .arg(
+                    Arg::with_name("modified_at")
+                        .value_name("modified_at")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "modified_at has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // I'm running out of characters and don't want to use random ones that have nothing
+                        // to do with the name of this option. Not sure what to do
+                        // .short("")
+                        .long("modified_at")
+                        .help("The time the file was last modified at. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("modified_before")
+                        .value_name("modified_before")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "modified_before has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("modified_before")
+                        .help("The file has to be last modified before this time. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("modified_after")
+                        .value_name("modified_after")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "modified_after has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("modified_after")
+                        .help("The file has to be last modified after this time. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("accessed_at")
+                        .value_name("accessed_at")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "accessed_at has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("accessed_at")
+                        .help("The time the file was last accessed at. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("accessed_before")
+                        .value_name("accessed_before")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "accessed_before has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("accessed_before")
+                        .help("The file has to be last accessed before this time. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("accessed_after")
+                        .value_name("accessed_after")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "accessed_after has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("accessed_after")
+                        .help("The file has to be last accessed after this time. Value should be in seconds relative to the unix epoch")
+                )
+                .arg(
+                    Arg::with_name("created_at")
+                        .value_name("created_at")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "created_at has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("created_at")
+                        .help("The time the file was created at. Value should be in seconds relative to the unix epoch. Note: Not all Unix platforms have this field available which results in an error")
+                )
+                .arg(
+                    Arg::with_name("created_before")
+                        .value_name("created_before")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "created_before has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("created_before")
+                        .help("The file has to be created before this time. Value should be in seconds relative to the unix epoch. Note: Not all Unix platforms have this field available which results in an error")
+                )
+                .arg(
+                    Arg::with_name("created_after")
+                        .value_name("created_after")
+                        .validator(|input| {
+                            input.parse::<i64>().map_err(|_| "created_after has to be a valid number".to_string())?;
+                            Ok(())
+                        })
+                        // .short("")
+                        .long("created_after")
+                        .help("The file has to be created after this time. Value should be in seconds relative to the unix epoch. Note: Not all Unix platforms have this field available which results in an error")
                 )
                 .arg(
                     Arg::with_name("max_num_results")
@@ -395,6 +497,90 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             }
 
+            if args.is_present("modified_before") && args.is_present("modified_after") {
+                let before_this_time = args.value_of("modified_before").unwrap().parse().unwrap();
+                let after_this_time = args.value_of("modified_after").unwrap().parse().unwrap();
+
+                if after_this_time >= before_this_time {
+                    return Err(Box::from("modified_after has to be less than modified_before"));
+                }
+
+                find_options_builder.add_condition(
+                    Condition::And(
+                        Box::from(Condition::Value(SearchCriteria::Modified(Modified::After(after_this_time)))),
+                        Box::from(Condition::Value(SearchCriteria::Modified(Modified::Before(before_this_time))))
+                    )
+                );
+            } else if args.is_present("modified_at") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Modified(Modified::At(args.value_of("modified_at").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("modified_before") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Modified(Modified::Before(args.value_of("modified_before").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("modified_after") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Modified(Modified::After(args.value_of("modified_after").unwrap().parse().unwrap())))
+                );
+            }
+
+            if args.is_present("accessed_before") && args.is_present("accessed_after") {
+                let before_this_time = args.value_of("accessed_before").unwrap().parse().unwrap();
+                let after_this_time = args.value_of("accessed_after").unwrap().parse().unwrap();
+
+                if after_this_time >= before_this_time {
+                    return Err(Box::from("accessed_after has to be less than accessed_before"));
+                }
+
+                find_options_builder.add_condition(
+                    Condition::And(
+                        Box::from(Condition::Value(SearchCriteria::Accessed(Accessed::After(after_this_time)))),
+                        Box::from(Condition::Value(SearchCriteria::Accessed(Accessed::Before(before_this_time))))
+                    )
+                );
+            } else if args.is_present("accessed_at") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Accessed(Accessed::At(args.value_of("accessed_at").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("accessed_before") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Accessed(Accessed::Before(args.value_of("accessed_before").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("accessed_after") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Accessed(Accessed::After(args.value_of("accessed_after").unwrap().parse().unwrap())))
+                );
+            }
+
+            if args.is_present("created_before") && args.is_present("created_after") {
+                let before_this_time = args.value_of("created_before").unwrap().parse().unwrap();
+                let after_this_time = args.value_of("created_after").unwrap().parse().unwrap();
+
+                if after_this_time >= before_this_time {
+                    return Err(Box::from("created_after has to be less than created_before"));
+                }
+
+                find_options_builder.add_condition(
+                    Condition::And(
+                        Box::from(Condition::Value(SearchCriteria::Created(Created::After(after_this_time)))),
+                        Box::from(Condition::Value(SearchCriteria::Created(Created::Before(before_this_time))))
+                    )
+                );
+            } else if args.is_present("created_at") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Created(Created::At(args.value_of("created_at").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("created_before") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Created(Created::Before(args.value_of("created_before").unwrap().parse().unwrap())))
+                );
+            } else if args.is_present("created_after") {
+                find_options_builder.add_condition(
+                    Condition::Value(SearchCriteria::Created(Created::After(args.value_of("created_after").unwrap().parse().unwrap())))
+                );
+            }
+
             let path_exact: Vec<SearchCriteria<'_>> =
                 args.values_of("path_exact").unwrap_or_default().map(|path| SearchCriteria::FilePath(FilePath::Exact(path))).collect();
             if !path_exact.is_empty() {
@@ -446,7 +632,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             find_options_builder.set_ignore_hidden_files(args.is_present("ignore_hidden_files"));
 
             find_options_builder.set_follow_symlinks(args.is_present("follow_symlinks"));
-            
+
             let find_options = find_options_builder.build();
             let output_separator = args.value_of("output_separator").unwrap();
 
