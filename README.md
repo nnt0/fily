@@ -17,13 +17,13 @@ Also, I'm developing this on a Windows machine so this *should* compile on Windo
 
 ## How to use
 
-`fily` consits of multiple modules that each do different things. You have to specify which one you want to use. Some modules have their own options, you can view the help message for each option with `fily <SUBCOMMAND> -h`.
+`fily` consists of multiple modules that each do different things. You have to specify which one you want to use. Some modules have their own options, you can view the help message for each option with `fily <SUBCOMMAND> -h`.
 
 You can also use `fily -h` to get a list of all modules, global settings and flags. If you set any global settings or flags they have to be __*before*__ the module name. If you put them after the module name they'll be interpreted as options belonging to the module and will be interpreted differently resulting in things you didn't intend.
 
-Currently every module besides `find` expects paths to the files it should work on, seperated by a new line, through stdin. The intended usage here is to invoke the `find` module to select the files you want and pipe its output into the module you want to use. For example: `fily find -p "." -i folders | fily duplicates -h`. This command first `find`s every file in the current working directory and every file in every subfolder and then searches it for duplicates.
+Currently every module besides `find` expects paths to the files it should work on through stdin. By default it expects them to be separated by a single new line but you can change the separator it uses. The intended usage here is to invoke the `find` module to select the files you want and pipe its output into the module you want to use. For example: `fily find -p "." -i folders | fily duplicates -h`. This command first `find`s every file in the current working directory and every file in every subfolder and then searches it for duplicates.
 
-You can use different ways of getting the paths to the files you want `fily` to work on as long as the paths are seperated by a new line and sent to stdin.
+You can use different ways of getting the paths to the files you want `fily` to work on as long as the paths are separated by a new line and sent to stdin.
 
 I also recommend that you always enable logging since `fily` will only report errors to stderr if the error causes the whole operation to fail. Otherwise it just logs them. If something didn't quite go like you expected it to or only some files were processed, check the logs.
 
@@ -31,7 +31,7 @@ I also recommend that you always enable logging since `fily` will only report er
 
 ### find
 
-`find`s files based on criteria you specify. You can add a lot of different criterias that the file has to match. Prints canonicalized paths to the files that match, seperated by a new line, to stdout. You can change the separator if you need it.
+`find`s files based on criteria you specify. You can add a lot of different criterias that the file has to match. Prints canonicalized paths to the files that match, separated by a new line, to stdout. You can change the separator if you need it.
 
 ### rename
 

@@ -1,7 +1,7 @@
 #![warn(clippy::cargo, clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 
-use std::{error::Error, io::{self, stdin, BufRead}, ffi::OsStr};
+use std::{error::Error, io::{self, stdin, Read, BufRead}, ffi::OsStr};
 use clap::{crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use regex::Regex;
 #[allow(unused_imports)]
@@ -54,6 +54,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .short("s")
                 .long("strict_logging")
                 .help("Don't run if logging fails for some reason and panic instead before doing anything. This is a failsafe if you need to make sure that actions are always recorded. This can also be set by creating an environment variable called FILY_STRICT_LOGGING")
+        )
+        .arg(
+            Arg::with_name("input_path_separator")
+                .value_name("input_path_separator")
+                .env("FILY_INPUT_PATH_SEPARATOR")
+                .short("p")
+                .long("input_path_separator")
+                .help("Changes the expected separator of the paths to the value you pass. Default separator is a new line")
         )
         .subcommand(
             SubCommand::with_name("find")
@@ -647,13 +655,21 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
         ("rename", Some(args)) => {
-            let files_to_rename = get_stdin_as_lines()?;
+            let files_to_rename = if app.is_present("input_path_separator") {
+                get_stdin_split(app.value_of("input_path_separator").unwrap())?
+            } else {
+                get_stdin_as_lines()?
+            };
             let new_filename_template = args.value_of("new_filename_template").unwrap();
 
             rename_files(&files_to_rename, new_filename_template)?;
         }
         ("duplicates", Some(args)) => {
-            let files_to_check = get_stdin_as_lines()?;
+            let files_to_check = if app.is_present("input_path_separator") {
+                get_stdin_split(app.value_of("input_path_separator").unwrap())?
+            } else {
+                get_stdin_as_lines()?
+            };
             let use_hash_version = args.is_present("use_hash_version");
 
             if use_hash_version {
@@ -673,14 +689,22 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         ("move", Some(args)) => {
-            let files_to_move = get_stdin_as_lines()?;
+            let files_to_move = if app.is_present("input_path_separator") {
+                get_stdin_split(app.value_of("input_path_separator").unwrap())?
+            } else {
+                get_stdin_as_lines()?
+            };
             let move_to = args.value_of("move_to").unwrap();
             let you_sure_prompt = !args.is_present("no_prompt");
 
             move_files(move_to, &files_to_move, you_sure_prompt)?;
         }
         ("similar_images", Some(args)) => {
-            let images_to_check = get_stdin_as_lines()?;
+            let images_to_check = if app.is_present("input_path_separator") {
+                get_stdin_split(app.value_of("input_path_separator").unwrap())?
+            } else {
+                get_stdin_as_lines()?
+            };
             let mut similar_images_options: SimilarImagesOptions = Default::default();
 
             similar_images_options.hash_alg = match args.value_of("hash_alg").unwrap() {
@@ -718,7 +742,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
         ("check_image_formats", _) => {
-            let images_to_check = get_stdin_as_lines()?;
+            let images_to_check = if app.is_present("input_path_separator") {
+                get_stdin_split(app.value_of("input_path_separator").unwrap())?
+            } else {
+                get_stdin_as_lines()?
+            };
 
             println!("{}", check_image_formats(&images_to_check)?
                 .iter()
@@ -759,6 +787,15 @@ fn setup_logger(log_level: &str) -> Result<(), Box<dyn Error>> {
         .apply()?;
 
     Ok(())
+}
+
+fn get_stdin_split(separator: &str) -> Result<Vec<String>, io::Error> {
+    let mut input = String::new();
+    stdin().lock().read_to_string(&mut input)?;
+
+    let input: Vec<String> = input.split(separator).map(|path_str| path_str.to_string()).collect();
+
+    Ok(input)
 }
 
 fn get_stdin_as_lines() -> Result<Vec<String>, io::Error> {
