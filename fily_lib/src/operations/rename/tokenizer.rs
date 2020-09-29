@@ -42,7 +42,7 @@ pub fn tokenize(text: &str) -> (Vec<FilenamePart<'_>>, FilenameOptions) {
 }
 
 fn parse_options(options: &[&str]) -> FilenameOptions {
-    let mut filename_options: FilenameOptions = Default::default();
+    let mut filename_options = FilenameOptions::default();
 
     for option in options {
         match option.trim() {

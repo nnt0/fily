@@ -22,7 +22,6 @@ use fily_lib::operations::{
 // TODO: actual error reporting on tokenizing rename template
 // TODO: find
 //       * add TryFrom<&str> for Condition<SearchCriteria<'a>> so you're able to make arbitrary combinations of conditions. Need a parser for that?
-//       * add option to search for stuff IN the file?
 //       * --exec and --exec_dir commands?
 //       * add only_return_directories flag? As in don't return the actual file but the directory it's in. This could enable some short circuting
 //       * max_num_results_per_folder option? do we include the results in subfolders or for every individual folder?
@@ -32,7 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let app = App::new(crate_name!())
         .about("Does stuff with files")
         .version(crate_version!())
-        .setting(AppSettings::ArgRequiredElseHelp)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::DeriveDisplayOrder)
         .setting(AppSettings::WaitOnError)
@@ -350,7 +348,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .subcommand(
             SubCommand::with_name("duplicates")
                 .about("Finds duplicate files and prints the paths to them in pairs")
-                // .setting(AppSettings::ArgRequiredElseHelp)
                 .setting(AppSettings::DeriveDisplayOrder)
                 .setting(AppSettings::WaitOnError)
                 .setting(AppSettings::UnifiedHelpMessage)
@@ -395,7 +392,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .value_name("hash_alg")
                         .default_value("gradient")
                         .possible_values(&["mean", "gradient", "vertgradient", "doublegradient", "blockhash"])
-                        .short("h")
+                        .short("a")
                         .long("hash_alg")
                         .help("Sets the hashing algorithm")
                 )

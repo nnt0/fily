@@ -22,7 +22,7 @@ impl Parser {
         let mut parsed_filename = String::new();
 
         for token in tokens {
-            match token {
+            match *token {
                 FilenamePart::Constant(string) => parsed_filename.push_str(string),
                 FilenamePart::Variable(variable) => parsed_filename.push_str(&self.parse_filename_variable(variable, &path)?),
                 FilenamePart::Error => {
@@ -35,7 +35,7 @@ impl Parser {
         Ok(parsed_filename)
     }
 
-    fn parse_filename_variable<P: AsRef<Path>>(&mut self, variable: &FilenameVariable, path: P) -> Result<String, Box<dyn Error>> {
+    fn parse_filename_variable<P: AsRef<Path>>(&mut self, variable: FilenameVariable, path: P) -> Result<String, Box<dyn Error>> {
         let path = path.as_ref();
         Ok(match variable {
             FilenameVariable::Filename => path.file_name()

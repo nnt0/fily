@@ -6,7 +6,7 @@ use log::{trace, debug, info, warn, error};
 /// Checks if the extension of an image matches the actual format
 ///
 /// Returns a `Vec` that contains, in this order, `path_to_file, filename_extension_format, should_be_format`. It could, for example, return
-/// `[("./a_file.jpg", "jpg", "png")]` which would mean that the file "a_file.jpg" should actually have ".png" as its extension
+/// `[("./a_file.jpg", "jpg", "png")]` which would mean that the file `a_file.jpg` should actually have `.png` as its extension
 /// because that is its actual format.
 ///
 /// This function can work on files that are not actually images without creating an error. Theres no guarantee that it'll report

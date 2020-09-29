@@ -20,18 +20,18 @@ pub use condition::Condition;
 /// you can define what criteria a file should or should not match.
 /// I recommend reading the docs on `Condition` and `SearchCriteria`
 ///
-/// max_num_results: limits the amount of paths returned
+/// `max_num_results`: limits the amount of paths returned
 ///
-/// max_search_depth: limits how many subfolders deep it searches
+/// `max_search_depth`: limits how many subfolders deep it searches
 ///
-/// min_depth_from_start: limits how many subfolders deep it should start searching. I recommend
-/// setting this lower than or equals to max_search_depth
+/// `min_depth_from_start`: limits how many subfolders deep it should start searching. I recommend
+/// setting this lower than or equals to `max_search_depth`
 ///
-/// ignore: used to either ignore all files or all folders
+/// `ignore`: used to either ignore all files or all folders
 ///
-/// ignore_hidden_files: ignore all files that start with a dot
+/// `ignore_hidden_files`: ignore all files that start with a dot
 ///
-/// follow_symlinks: if it should follow any symlinks and search in there too
+/// `follow_symlinks`: if it should follow any symlinks and search in there too
 #[derive(Clone, Debug)]
 pub struct FindOptions<'a> {
     pub options: Vec<Condition<SearchCriteria<'a>>>,
@@ -65,7 +65,7 @@ pub struct FindOptionsBuilder<'a> {
 impl<'a> FindOptionsBuilder<'a> {
     #[inline]
     pub fn new() -> Self {
-        Default::default()
+        FindOptionsBuilder::default()
     }
 
     #[inline]
@@ -93,7 +93,7 @@ impl<'a> FindOptionsBuilder<'a> {
 
         let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
 
-        for criteria in search_criterias.into_iter() {
+        for criteria in search_criterias {
             option = Box::from(Condition::And(Box::from(Condition::Value(criteria)), option));
         }
 
@@ -109,7 +109,7 @@ impl<'a> FindOptionsBuilder<'a> {
 
         let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
 
-        for criteria in search_criterias.into_iter() {
+        for criteria in search_criterias {
             option = Box::from(Condition::Or(Box::from(Condition::Value(criteria)), option));
         }
 
@@ -125,7 +125,7 @@ impl<'a> FindOptionsBuilder<'a> {
 
         let mut option = Box::from(Condition::Not(Box::from(Condition::Value(search_criterias.remove(0)))));
 
-        for criteria in search_criterias.into_iter() {
+        for criteria in search_criterias {
             option = Box::from(Condition::And(Box::from(Condition::Not(Box::from(Condition::Value(criteria)))), option));
         }
 
@@ -214,8 +214,8 @@ pub enum FilePath<'a> {
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 ///
-/// The value it checks it against corresponds to the mtime field of stat on
-/// Unix platforms and the ftLastWriteTime field on Windows platforms
+/// The value it checks it against corresponds to the `mtime` field of `stat` on
+/// Unix platforms and the `ftLastWriteTime` field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Modified {
     At(i64),
@@ -225,8 +225,8 @@ pub enum Modified {
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 ///
-/// The value it checks it against corresponds to the atime field of stat on
-/// Unix platforms and the ftLastAccessTime field on Windows platforms
+/// The value it checks it against corresponds to the `atime` field of `stat` on
+/// Unix platforms and the `ftLastAccessTime` field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Accessed {
     At(i64),
@@ -236,8 +236,8 @@ pub enum Accessed {
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
 ///
-/// The value it checks it against corresponds to the birthtime field of stat on
-/// Unix platforms and the ftCreationTime field on Windows platforms
+/// The value it checks it against corresponds to the `birthtime` field of `stat` on
+/// Unix platforms and the `ftCreationTime` field on Windows platforms
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Created {
     At(i64),
@@ -314,12 +314,15 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                 Some(entry)
             });
 
-        let mut matching_files: Vec<PathBuf> = dir_iterator.filter(|entry| {
+        let mut matching_files: Vec<PathBuf> = dir_iterator.filter_map(|entry| {
                 // Checks if all Conditions match the file
                 // If any do not match the file gets filtered out
-                find_options.options.iter().all(|option| option.evaluate(entry).unwrap_or(false))
+                if find_options.options.iter().all(|option| option.evaluate(&entry).unwrap_or(false)) {
+                    Some(entry.into_path())
+                } else {
+                    None
+                }
             })
-            .map(|entry| entry.into_path())
             .collect();
 
         if results.len() + matching_files.len() >= find_options.max_num_results {
