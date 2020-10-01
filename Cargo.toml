@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["nnt0"]
 edition = "2018"
 license = "GPL-3.0-or-later"
+repository = "https://github.com/nnt0/fily/"
+readme = "README.md"
+categories = ["command-line-utilities", "filesystem"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
