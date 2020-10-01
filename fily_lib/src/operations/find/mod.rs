@@ -276,7 +276,7 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
     let mut results = Vec::new();
 
     for path in paths_to_search_in {
-        let dir_iterator = WalkDir::new(&path)
+        let mut matching_files: Vec<PathBuf> = WalkDir::new(path)
             .min_depth(find_options.min_depth_from_start)
             .max_depth(find_options.max_search_depth)
             .follow_links(find_options.follow_symlinks)
@@ -311,10 +311,6 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                     };
                 }
 
-                Some(entry)
-            });
-
-        let mut matching_files: Vec<PathBuf> = dir_iterator.filter_map(|entry| {
                 // Checks if all Conditions match the file
                 // If any do not match the file gets filtered out
                 if find_options.options.iter().all(|option| option.evaluate(&entry).unwrap_or(false)) {
