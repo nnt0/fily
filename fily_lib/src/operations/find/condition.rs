@@ -34,7 +34,7 @@ impl<'a> TryFrom<&str> for Condition<SearchCriteria<'a>> {
 }
 
 impl<'a> Condition<SearchCriteria<'a>> {
-    /// Checks if the file that `path` points to matches the condition
+    /// Checks if the file that `dir_entry` points to matches the condition
     ///
     /// Returns `Ok(true)` if it does and `Ok(false)` if it doesn't. If an error
     /// occured while trying to get info on the file it'll return `Err(())` and log
