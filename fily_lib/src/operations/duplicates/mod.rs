@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, error::Error, fs::{read, canonicalize}};
+use std::{path::{Path, PathBuf}, fs::{read, canonicalize}};
 use crc32fast::Hasher;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -10,7 +10,9 @@ use log::{trace, debug, info, warn, error};
 /// one collision is at 0.01157388106%.
 /// This is a pretty slim chance of a false duplicate so we should be fine most of the time but if you need to make sure that you
 /// don't accidentally delete a file that is not a duplicate you'll have to check them by hand.
-pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Result<Vec<(PathBuf, PathBuf)>, Box<dyn Error>> {
+///
+/// This will log any errors it encounters and just ignore the file that produced an error
+pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
     let files_to_check = {
         let mut files_to_check_canonicalized = Vec::with_capacity(files_to_check.len());
 
@@ -105,7 +107,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Result
 
     debug!("Found {} duplicates", duplicates.len());
 
-    Ok(duplicates)
+    duplicates
 }
 
 /// Finds files that are exact duplicates
@@ -117,7 +119,9 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Result
 /// usage of at least 20 GB.
 ///
 /// If you know that you won't be able to provide the needed memory, use `find_duplicate_files_hash()`
-pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Result<Vec<(PathBuf, PathBuf)>, Box<dyn Error>> {
+///
+/// This will log any errors it encounters and just ignore the file that produced an error
+pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
     let files_to_check = {
         // Doing this so the full path appears in the logs instead of a relative one
         // Maybe this is useless who knows
@@ -125,7 +129,13 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Result<Vec<
         let mut files_to_check_canonicalized = Vec::with_capacity(files_to_check.len());
 
         for path in files_to_check {
-            files_to_check_canonicalized.push(canonicalize(path)?);
+            files_to_check_canonicalized.push(match canonicalize(path) {
+                Ok(path) => path,
+                Err(e) => {
+                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
+                    continue;
+                }
+            });
         }
 
         files_to_check_canonicalized
@@ -200,7 +210,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Result<Vec<
 
     debug!("Found {} duplicates", duplicates.len());
 
-    Ok(duplicates)
+    duplicates
 }
 
 struct File<T: AsRef<Path>> {

@@ -670,14 +670,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             let use_hash_version = args.is_present("use_hash_version");
 
             if use_hash_version {
-                println!("{}", find_duplicate_files_hash(&files_to_check)?
+                println!("{}", find_duplicate_files_hash(&files_to_check)
                     .iter()
                     .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
                     .collect::<Vec<String>>()
                     .join("\n")
                 );
             } else {
-                println!("{}", find_duplicate_files(&files_to_check)?
+                println!("{}", find_duplicate_files(&files_to_check)
                     .iter()
                     .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
                     .collect::<Vec<String>>()
