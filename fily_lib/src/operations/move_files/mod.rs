@@ -19,6 +19,10 @@ impl fmt::Display for MoveFilesError {
 }
 
 /// Moves all files from one place to another
+///
+/// # Errors
+///
+/// Fails if `move_to` does not exist and it fails to create it, if `move_to` points to a file or if an error occurs canonicalizing `move_to`
 pub fn move_files<T, U>(move_to: T, files_to_move: &[U], you_sure_prompt: bool) -> Result<(), MoveFilesError> where
     T: AsRef<Path>,
     U: AsRef<Path> {
