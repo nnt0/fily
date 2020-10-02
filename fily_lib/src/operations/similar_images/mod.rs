@@ -62,65 +62,63 @@ pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images
     let mut similar_images = Vec::new();
 
     for i in 0..images_to_check_len {
-        let image1_hash = match images_to_check[i].hash {
-            Some(_) => images_to_check[i].hash.take().unwrap(),
-            None => {
-                let reader = match Reader::open(&images_to_check[i].path) {
+        let image1_hash = if images_to_check[i].hash.is_some() {
+            images_to_check[i].hash.take().unwrap()
+        } else {
+            let reader = match Reader::open(&images_to_check[i].path) {
+                Ok(reader) => reader,
+                Err(e) => {
+                    info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                    continue;
+                }
+            };
+            let reader = match reader.with_guessed_format() {
+                Ok(reader) => reader,
+                Err(e) => {
+                    info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                    continue;
+                }
+            };
+            let image = match reader.decode() {
+                Ok(image) => image,
+                Err(e) => {
+                    info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                    continue;
+                }
+            };
+            hasher.hash_image(&image)
+        };
+
+        for j in i + 1..images_to_check_len {
+            let image2_hash = if let Some(ref hash) = images_to_check[j].hash {
+                hash
+            } else {
+                let reader = match Reader::open(&images_to_check[j].path) {
                     Ok(reader) => reader,
                     Err(e) => {
-                        info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                        info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
                         continue;
                     }
                 };
                 let reader = match reader.with_guessed_format() {
                     Ok(reader) => reader,
                     Err(e) => {
-                        info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                        info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
                         continue;
                     }
                 };
                 let image = match reader.decode() {
                     Ok(image) => image,
                     Err(e) => {
-                        info!("Failed to open {:?} {}", images_to_check[i].path.display(), e);
+                        info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
                         continue;
                     }
                 };
-                hasher.hash_image(&image)
-            }
-        };
+                let hash = hasher.hash_image(&image);
 
-        for j in i + 1..images_to_check_len {
-            let image2_hash = match images_to_check[j].hash {
-                Some(ref hash) => hash,
-                None => {
-                    let reader = match Reader::open(&images_to_check[j].path) {
-                        Ok(reader) => reader,
-                        Err(e) => {
-                            info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
-                            continue;
-                        }
-                    };
-                    let reader = match reader.with_guessed_format() {
-                        Ok(reader) => reader,
-                        Err(e) => {
-                            info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
-                            continue;
-                        }
-                    };
-                    let image = match reader.decode() {
-                        Ok(image) => image,
-                        Err(e) => {
-                            info!("Failed to open {:?} {}", images_to_check[j].path.display(), e);
-                            continue;
-                        }
-                    };
-                    let hash = hasher.hash_image(&image);
+                images_to_check[j].hash = Some(hash);
 
-                    images_to_check[j].hash = Some(hash);
-
-                    images_to_check[j].hash.as_ref().unwrap()
-                }
+                images_to_check[j].hash.as_ref().unwrap()
             };
 
             let distance = image1_hash.dist(image2_hash);
