@@ -53,12 +53,11 @@ pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(PathBu
                 }
             };
 
-            match reader.format() {
-                Some(format) => format.extensions_str()[0],
-                None => {
-                    info!("Failed to get format of {:?} skipping this file", path.display());
-                    continue;
-                }
+            if let Some(format) = reader.format() {
+                format.extensions_str()[0]
+            } else {
+                info!("Failed to get format of {:?} skipping this file", path.display());
+                continue;
             }
         };
         let format_from_path = match ImageFormat::from_path(&path) {
@@ -70,15 +69,15 @@ pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(PathBu
                 // this is always going to stay this way so it may be possible that this breaks at some point
                 // if I update the image crate. I dislike this piece of code.
                 ImageError::Unsupported(unsupported_e) => match unsupported_e.format_hint() {
-                    ImageFormatHint::PathExtension(_) => match path.extension() {
-                        Some(ext_os) => match ext_os.to_str() {
-                            Some(ext) => ext,
-                            None => {
-                                info!("Failed to convert {:?} to UTF-8 skipping this file", path.extension());
-                                continue;
-                            }
+                    ImageFormatHint::PathExtension(_) => if let Some(ext_os) = path.extension() {
+                        if let Some(ext) = ext_os.to_str() {
+                            ext
+                        } else {
+                            info!("Failed to convert {:?} to UTF-8 skipping this file", path.extension());
+                            continue;
                         }
-                        None => "",
+                    } else {
+                        ""
                     },
                     ImageFormatHint::Unknown => "",
                     _ => {
