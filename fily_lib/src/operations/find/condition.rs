@@ -36,9 +36,13 @@ impl<'a> TryFrom<&str> for Condition<SearchCriteria<'a>> {
 impl<'a> Condition<SearchCriteria<'a>> {
     /// Checks if the file that `dir_entry` points to matches the condition
     ///
-    /// Returns `Ok(true)` if it does and `Ok(false)` if it doesn't. If an error
-    /// occured while trying to get info on the file it'll return `Err(())` and log
-    /// the error (assuming logging is turned on)
+    /// Returns `true` if it does and `false` if it doesn't
+    ///
+    /// # Errors
+    ///
+    /// Fails if a file operation fails. i.e. Getting the filename, filesize...
+    ///
+    /// Errors currently don't actually get returned but logged (assuming logging is turned on)
     pub fn evaluate(&self, dir_entry: &DirEntry) -> Result<bool, ()> {
         // TODO: Maybe we should return an actual eror here?
         match self {
@@ -47,32 +51,30 @@ impl<'a> Condition<SearchCriteria<'a>> {
             Self::Or(condition1, condition2) => Ok(condition1.evaluate(dir_entry)? || condition2.evaluate(dir_entry)?),
             Self::Value(search_criteria) => {
                 Ok(match search_criteria {
-                    SearchCriteria::Filename(filename_options) => self.filename_matches(dir_entry, filename_options)?,
-                    SearchCriteria::Filesize(filesize_options) => self.filesize_matches(dir_entry, filesize_options)?,
-                    SearchCriteria::FilePath(filepath_options) => self.filepath_matches(dir_entry, filepath_options)?,
-                    SearchCriteria::FilenameRegex(filename_regex) => self.filename_regex_matches(dir_entry, filename_regex)?,
-                    SearchCriteria::Modified(modified_options) => self.modification_time_matches(dir_entry, modified_options)?,
-                    SearchCriteria::Accessed(access_options) => self.access_time_matches(dir_entry, access_options)?,
-                    SearchCriteria::Created(creation_options) => self.creation_time_matches(dir_entry, creation_options)?,
+                    SearchCriteria::Filename(filename_options) => Self::filename_matches(dir_entry, filename_options)?,
+                    SearchCriteria::Filesize(filesize_options) => Self::filesize_matches(dir_entry, filesize_options)?,
+                    SearchCriteria::FilePath(filepath_options) => Self::filepath_matches(dir_entry, filepath_options)?,
+                    SearchCriteria::FilenameRegex(filename_regex) => Self::filename_regex_matches(dir_entry, filename_regex)?,
+                    SearchCriteria::Modified(modified_options) => Self::modification_time_matches(dir_entry, modified_options)?,
+                    SearchCriteria::Accessed(access_options) => Self::access_time_matches(dir_entry, access_options)?,
+                    SearchCriteria::Created(creation_options) => Self::creation_time_matches(dir_entry, creation_options)?,
                 })
             }
         }
     }
 
-    fn filename_matches(&self, dir_entry: &DirEntry, filename_options: &Filename<'_>) -> Result<bool, ()> {
+    fn filename_matches(dir_entry: &DirEntry, filename_options: &Filename<'_>) -> Result<bool, ()> {
         let path = dir_entry.path();
-        let filename = match path.file_name() {
-            Some(filename_osstr) => match filename_osstr.to_str() {
-                Some(filename) => filename,
-                None => {
-                    info!("Failed to convert filename of {:?} to UTF-8 skipping entry", path.display());
-                    return Err(());
-                }
-            }
-            None => {
-                info!("Failed to get filename of {:?} skipping entry", path.display());
+        let filename = if let Some(filename_osstr) = path.file_name() {
+            if let Some(filename) = filename_osstr.to_str() {
+                filename
+            } else {
+                info!("Failed to convert filename of {:?} to UTF-8 skipping entry", path.display());
                 return Err(());
             }
+        } else {
+            info!("Failed to get filename of {:?} skipping entry", path.display());
+            return Err(());
         };
 
         Ok(match *filename_options {
@@ -81,7 +83,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filesize_matches(&self, dir_entry: &DirEntry, filesize_options: &Filesize) -> Result<bool, ()> {
+    fn filesize_matches(dir_entry: &DirEntry, filesize_options: &Filesize) -> Result<bool, ()> {
         let filesize = match dir_entry.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
@@ -97,14 +99,13 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filepath_matches(&self, dir_entry: &DirEntry, filepath_options: &FilePath<'_>) -> Result<bool, ()> {
+    fn filepath_matches(dir_entry: &DirEntry, filepath_options: &FilePath<'_>) -> Result<bool, ()> {
         let path = dir_entry.path();
-        let path = match path.as_os_str().to_str() {
-            Some(path) => path,
-            None => {
-                info!("Failed to convert path {:?} to UTF-8 skipping entry", path.display());
-                return Err(());
-            }
+        let path = if let Some(path) = dir_entry.path().as_os_str().to_str() {
+            path
+        } else {
+            info!("Failed to convert path {:?} to UTF-8 skipping entry", path.display());
+            return Err(());
         };
 
         Ok(match *filepath_options {
@@ -113,26 +114,24 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filename_regex_matches(&self, dir_entry: &DirEntry, filename_regex: &Regex) -> Result<bool, ()> {
+    fn filename_regex_matches(dir_entry: &DirEntry, filename_regex: &Regex) -> Result<bool, ()> {
         let path = dir_entry.path();
-        let filename = match path.file_name() {
-            Some(filename_osstr) => match filename_osstr.to_str() {
-                Some(filename) => filename,
-                None => {
-                    info!("Failed to convert filename of {:?} to UTF-8 skipping entry", path.display());
-                    return Err(());
-                }
-            }
-            None => {
-                info!("Failed to get filename of {:?} skipping entry", path.display());
+        let filename = if let Some(filename_osstr) = path.file_name() {
+            if let Some(filename) = filename_osstr.to_str() {
+                filename
+            } else {
+                info!("Failed to convert filename of {:?} to UTF-8 skipping entry", path.display());
                 return Err(());
             }
+        } else {
+            info!("Failed to get filename of {:?} skipping entry", path.display());
+            return Err(());
         };
 
         Ok(filename_regex.is_match(filename))
     }
 
-    fn modification_time_matches(&self, dir_entry: &DirEntry, modified_options: &Modified) -> Result<bool, ()> {
+    fn modification_time_matches(dir_entry: &DirEntry, modified_options: &Modified) -> Result<bool, ()> {
         let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
@@ -150,7 +149,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn access_time_matches(&self, dir_entry: &DirEntry, access_options: &Accessed) -> Result<bool, ()> {
+    fn access_time_matches(dir_entry: &DirEntry, access_options: &Accessed) -> Result<bool, ()> {
         let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
@@ -168,7 +167,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn creation_time_matches(&self, dir_entry: &DirEntry, creation_options: &Created) -> Result<bool, ()> {
+    fn creation_time_matches(dir_entry: &DirEntry, creation_options: &Created) -> Result<bool, ()> {
         let metadata = match dir_entry.metadata() {
             Ok(metadata) => metadata,
             Err(e) => {
@@ -177,12 +176,11 @@ impl<'a> Condition<SearchCriteria<'a>> {
             }
         };
 
-        let creation_time = match FileTime::from_creation_time(&metadata){
-            Some(creation_time) => creation_time.unix_seconds(),
-            None => {
-                info!("Failed to get creation time of {:?} skipping file", dir_entry.path().display());
-                return Err(());
-            }
+        let creation_time = if let Some(file_time) = FileTime::from_creation_time(&metadata){
+            file_time.unix_seconds()
+        } else {
+            info!("Failed to get creation time of {:?} skipping file", dir_entry.path().display());
+            return Err(());
         };
 
         Ok(match *creation_options {
