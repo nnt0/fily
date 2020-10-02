@@ -644,7 +644,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let find_options = find_options_builder.build();
             let output_separator = args.value_of("output_separator").unwrap();
 
-            println!("{}", find(&paths_to_search_in, &find_options)?
+            println!("{}", find(&paths_to_search_in, &find_options)
                 .iter()
                 .map(|path| path.display().to_string())
                 .collect::<Vec<String>>()

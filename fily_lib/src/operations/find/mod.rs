@@ -16,7 +16,7 @@ pub use condition::Condition;
 /// provides a config that matches anything. So you only have to change the options
 /// you care about
 ///
-/// options: Contains a vec of Condition<SearchCriteria<'a>> with which you
+/// `options`: Contains a vec of Condition<SearchCriteria<'a>> with which you
 /// you can define what criteria a file should or should not match.
 /// I recommend reading the docs on `Condition` and `SearchCriteria`
 ///
@@ -254,7 +254,10 @@ pub enum Ignore {
 /// Finds files or directories that fit all of the criteria
 /// 
 /// The returned `Vec` can be empty if nothing was found
-pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions<'_>) -> Result<Vec<PathBuf>, Box<dyn Error>> {
+///
+/// If it encounters any errors while getting info on files it will just log it
+/// (assuming logging is turned on) and ignore the file where the error happened
+pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions<'_>) -> Vec<PathBuf> {
     let paths_to_search_in = {
         let mut paths_to_search_in_canonicalized = Vec::with_capacity(paths_to_search_in.len());
 
@@ -302,13 +305,12 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                 }
 
                 if find_options.ignore_hidden_files {
-                    match entry.file_name().to_str() {
-                        Some(name) => if name.starts_with('.') {
+                    if let Some(name) = entry.file_name().to_str() {
+                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
+                        if name.starts_with('.') {
                             return None;
                         }
-                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
-                        None => {},
-                    };
+                    }
                 }
 
                 // Checks if all Conditions match the file
@@ -337,5 +339,5 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
 
     debug!("Found {} files", results.len());
 
-    Ok(results)
+    results
 }
