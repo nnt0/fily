@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, error::Error, fs::canonicalize};
+use std::{path::{PathBuf, Path}, fs::canonicalize};
 use image::{io::Reader, ImageFormat, ImageError, error::ImageFormatHint};
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -12,7 +12,10 @@ use log::{trace, debug, info, warn, error};
 /// This function can work on files that are not actually images without creating an error. Theres no guarantee that it'll report
 /// the right thing in this case. For example, it'll report .wav files as a false positive saying that they should have the
 /// the .webp extension.
-pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Result<Vec<(PathBuf, String, String)>, Box<dyn Error>> {
+///
+/// If it encounters any errors while getting info on files it will just log it
+/// (assuming logging is turned on) and ignore the file where the error happened
+pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(PathBuf, String, String)> {
     let images_to_check = {
         let mut images_to_check_canonicalized = Vec::with_capacity(images_to_check.len());
 
@@ -97,5 +100,5 @@ pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Result<Vec<
         }
     }
 
-    Ok(images_with_wrong_extensions)
+    images_with_wrong_extensions
 }

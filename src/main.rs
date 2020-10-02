@@ -745,7 +745,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 get_stdin_as_lines()?
             };
 
-            println!("{}", check_image_formats(&images_to_check)?
+            println!("{}", check_image_formats(&images_to_check)
                 .iter()
                 .map(|wrong_format_image| format!("{}, {}, {}", wrong_format_image.0.display(), wrong_format_image.1, wrong_format_image.2))
                 .collect::<Vec<String>>()
