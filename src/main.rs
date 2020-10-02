@@ -731,7 +731,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             similar_images_options.threshold = args.value_of("threshold").unwrap().parse().unwrap();
 
-            println!("{}", find_similar_images(&images_to_check, similar_images_options)?
+            println!("{}", find_similar_images(&images_to_check, similar_images_options)
                 .iter()
                 .map(|similar_images| format!("{}, {}", similar_images.0.display(), similar_images.1.display()))
                 .collect::<Vec<String>>()

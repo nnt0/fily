@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, error::Error, fs::canonicalize};
+use std::{path::{PathBuf, Path}, fs::canonicalize};
 use image::io::Reader;
 pub use img_hash::{HashAlg, FilterType};
 #[allow(unused_imports)]
@@ -30,7 +30,7 @@ struct Image {
 }
 
 /// Finds images that are similar to each other
-pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Result<Vec<(PathBuf, PathBuf)>, Box<dyn Error>> {
+pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(PathBuf, PathBuf)> {
     let mut images_to_check = {
         let mut images_to_check_canonicalized = Vec::with_capacity(images_to_check.len());
 
@@ -133,5 +133,5 @@ pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images
 
     debug!("Found {} similar images", similar_images.len());
 
-    Ok(similar_images)
+    similar_images
 }
