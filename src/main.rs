@@ -433,15 +433,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 )
                 .arg(
                     Arg::with_name("threshold")
+                        .required(true)
                         .value_name("threshold")
-                        .default_value("31")
                         .validator(|input| {
                             input.parse::<u32>().map_err(|_| "threshold has to be a valid positive number".to_string())?;
                             Ok(())
                         })
                         .short("t")
                         .long("threshold")
-                        .help("Sets how close the images have to be to another. Values of around 31 seem to work decently well")
+                        .help("Sets how close the images have to be to another")
                 )
         )
         .subcommand(
