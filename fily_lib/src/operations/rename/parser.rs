@@ -1,7 +1,24 @@
-use std::{ffi::OsStr, path::Path, error::Error};
-use crate::operations::rename::{tokenizer::{FilenamePart, FilenameVariable}, RenameFilesError};
+use std::{ffi::OsStr, path::Path, error::Error, fmt, io};
+use super::tokenizer::{FilenamePart, FilenameVariable};
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
+
+#[derive(Debug)]
+pub enum ParseError {
+    FilenameNoBase,
+    NoFilename,
+    UTF8ConversionFailed,
+    TokenizeErrorInTokens,
+    IOError(io::Error),
+}
+
+impl Error for ParseError {}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 /// Used to parse a sequence of `FilenamePart`s to a `String`
 ///
@@ -18,7 +35,7 @@ impl Parser {
     }
 
     /// Turns a list of `FilenamePart`s into a string
-    pub fn parse_filename<'a, P: AsRef<Path>>(&mut self, tokens: &[FilenamePart<'a>], path: P) -> Result<String, Box<dyn Error>> {
+    pub fn parse_filename<'a>(&mut self, tokens: &[FilenamePart<'a>], path: impl AsRef<Path>) -> Result<String, ParseError> {
         let mut parsed_filename = String::new();
 
         for token in tokens {
@@ -27,7 +44,7 @@ impl Parser {
                 FilenamePart::Variable(variable) => parsed_filename.push_str(&self.parse_filename_variable(variable, &path)?),
                 FilenamePart::Error => {
                     error!("A FilenamePart::Error got into parse_filename");
-                    return Err(Box::from(RenameFilesError::TokenizeError));
+                    return Err(ParseError::TokenizeErrorInTokens);
                 }
             };
         }
@@ -35,25 +52,44 @@ impl Parser {
         Ok(parsed_filename)
     }
 
-    fn parse_filename_variable<P: AsRef<Path>>(&mut self, variable: FilenameVariable, path: P) -> Result<String, Box<dyn Error>> {
+    fn parse_filename_variable(&mut self, variable: FilenameVariable, path: impl AsRef<Path>) -> Result<String, ParseError> {
         let path = path.as_ref();
         Ok(match variable {
             FilenameVariable::Filename => path.file_name()
-                .ok_or_else(|| format!("Can't get filename of {:?} no base", path.display()))?
+                .ok_or_else(|| {
+                    info!("Can't get filename of {:?} no base", path.display());
+                    ParseError::FilenameNoBase
+                })?
                 .to_str()
-                .ok_or_else(|| format!("Can't convert {:?} to UTF-8", path.display()))?
+                .ok_or_else(|| {
+                    info!("Can't convert {:?} to UTF-8", path.display());
+                    ParseError::UTF8ConversionFailed
+                })?
                 .to_string(),
             FilenameVariable::FilenameBase => path.file_stem()
-                .ok_or_else(|| format!("Can't get filename of {:?} no base", path.display()))?
+                .ok_or_else(|| {
+                    info!("Can't get filename of {:?} no filename", path.display());
+                    ParseError::NoFilename
+                })?
                 .to_str()
-                .ok_or_else(|| format!("Can't convert {:?} to UTF-8", path.display()))?
+                .ok_or_else(|| {
+                    info!("Can't convert {:?} to UTF-8", path.display());
+                    ParseError::UTF8ConversionFailed
+                })?
                 .to_string(),
             FilenameVariable::FilenameExtension => path.extension()
                 .unwrap_or_else(|| OsStr::new(""))
                 .to_str()
-                .ok_or_else(|| format!("Can't convert {:?} to UTF-8", path.display()))?
+                .ok_or_else(|| {
+                    info!("Can't convert {:?} to UTF-8", path.display());
+                    ParseError::UTF8ConversionFailed
+                })?
                 .to_string(),
-            FilenameVariable::FileSize => path.metadata()?
+            FilenameVariable::FileSize => path.metadata()
+                .map_err(|e| {
+                    info!("Failed to get size of {:?} {}", path.display(), e);
+                    ParseError::IOError(e)
+                })?
                 .len()
                 .to_string(),
             FilenameVariable::IncrementingNumber => {

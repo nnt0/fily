@@ -1,4 +1,4 @@
-use std::{fs::{canonicalize, rename}, path::Path, error::Error, fmt};
+use std::{fs::{canonicalize, rename}, path::Path};
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -8,24 +8,25 @@ use tokenizer::{tokenize, FilenamePart, TokenizeError};
 mod parser;
 use parser::Parser;
 
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub enum RenameFilesError {
-    TokenizeError,
-}
+// #[derive(Eq, PartialEq, Clone, Copy, Debug)]
+// pub enum RenameFilesError {
+//     TokenizeError(TokenizeError),
+// }
 
-impl Error for RenameFilesError {}
+// impl Error for RenameFilesError {}
 
-impl fmt::Display for RenameFilesError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+// impl fmt::Display for RenameFilesError {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "{:?}", self)
+//     }
+// }
 
 /// Renames all files based on a template
-pub fn rename_files<P: AsRef<Path>>(
-    files_to_rename: &[P],
-    new_filename_template: &str,
-) -> Result<(), Box<dyn Error>> {
+///
+/// # Errors
+///
+/// This fails if either the template or the options for renaming have an error
+pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), TokenizeError> {
     let files_to_rename = {
         let mut files_to_rename_canonicalized = Vec::with_capacity(files_to_rename.len());
 
@@ -49,8 +50,10 @@ pub fn rename_files<P: AsRef<Path>>(
     if filename_tokenized.contains(&FilenamePart::Error) {
         info!("Tokenize error");
         // TODO: This should just return the actual Error but we have to wait until Logos supports returning actual errors
-        return Err(Box::from(RenameFilesError::TokenizeError));
+        return Err(TokenizeError::UnknownError);
     }
+
+    let options = options?;
 
     let mut parser = Parser::builder().incrementing_number(options.incrementing_number_starts_at).build();
 
