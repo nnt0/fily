@@ -1,5 +1,5 @@
 use std::{fs::{canonicalize, rename, create_dir_all}, error::Error, path::Path, io, fmt};
-use dialoguer::Confirm;
+// use dialoguer::Confirm;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
