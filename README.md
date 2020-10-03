@@ -92,7 +92,7 @@ You always have to set the loglevel before specifying the operation. For example
 
 Having it at any position behind the operation name will not result in what you want.
 
-There is also the strict logging flag. You can enable it with `-s`, `--strict_logging` or by creating an environment variable called `FILY_STRICT_LOGGING`. The value of the environment variable doesn't matter. Setting this flag doesn't allow fily to run without logging. If the setup fails for some reason the program will just panic before doing anything. This does not stop the program it if you set logging to `off`. This only makes sure that the setup does not fail.
+There is also the strict logging flag. You can enable it with `-s`, `--strict_logging` or by creating an environment variable called `FILY_STRICT_LOGGING`. The value of the environment variable doesn't matter. Setting this flag doesn't allow fily to run without logging. If the setup fails for some reason the program will just stop before doing anything. This does not stop the program if you set logging to `off`. This only makes sure that the setup does not fail.
 
 ## Dealing with UTF-8 in PowerShell on Windows
 

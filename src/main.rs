@@ -456,7 +456,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         eprintln!("Error while setting up logging {}", e);
 
         if app.is_present("fail_on_no_logging") {
-            panic!("Failed to set up logging");
+            return Err(Box::from("Failed to set up logging"));
         }
     }
 
