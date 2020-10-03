@@ -17,7 +17,7 @@ Also, I'm developing this on a Windows machine so this *should* compile on Windo
 
 ## How to use
 
-`fily` consists of multiple modules that each do different things. You have to specify which one you want to use. Some modules have their own options, you can view the help message for each option with `fily <SUBCOMMAND> -h`.
+`fily` consists of multiple modules that each do different things. You have to specify which one you want to use. Some modules have their own options, you can view the help message for each option with `fily <SUBCOMMAND> --help`.
 
 You can also use `fily -h` to get a list of all modules, global settings and flags. If you set any global settings or flags they have to be __*before*__ the module name. If you put them after the module name they'll be interpreted as options belonging to the module and will be interpreted differently resulting in things you didn't intend.
 
