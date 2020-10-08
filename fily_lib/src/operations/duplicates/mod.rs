@@ -13,21 +13,16 @@ use log::{trace, debug, info, warn, error};
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
 pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
-    let files_to_check = {
-        let mut files_to_check_canonicalized = Vec::with_capacity(files_to_check.len());
-
-        for path in files_to_check {
-            files_to_check_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let files_to_check: Vec<PathBuf> =
+        files_to_check.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
-                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                    continue;
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
                 }
-            });
-        }
-
-        files_to_check_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("find_duplicate_files_hash files_to_check: {:?}", files_to_check);
 
@@ -122,24 +117,16 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(P
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
 pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
-    let files_to_check = {
-        // Doing this so the full path appears in the logs instead of a relative one
-        // Maybe this is useless who knows
-        // The extra allocation isn't ideal i guess but nothing here is ideal anyways
-        let mut files_to_check_canonicalized = Vec::with_capacity(files_to_check.len());
-
-        for path in files_to_check {
-            files_to_check_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let files_to_check: Vec<PathBuf> =
+        files_to_check.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
-                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                    continue;
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
                 }
-            });
-        }
-
-        files_to_check_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("find_duplicate_files files_to_check: {:?}", files_to_check);
 

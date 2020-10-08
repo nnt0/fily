@@ -259,21 +259,16 @@ pub enum Ignore {
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
 pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions<'_>) -> Vec<PathBuf> {
-    let paths_to_search_in = {
-        let mut paths_to_search_in_canonicalized = Vec::with_capacity(paths_to_search_in.len());
-
-        for path in paths_to_search_in {
-            paths_to_search_in_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let paths_to_search_in: Vec<PathBuf> =
+        paths_to_search_in.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
                     info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    continue;
+                    None
                 }
-            });
-        }
-
-        paths_to_search_in_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("find paths_to_search_in: {:?} find_options: {:?}", paths_to_search_in, find_options);
 

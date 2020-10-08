@@ -1,4 +1,4 @@
-use std::{fs::{canonicalize, rename}, path::Path};
+use std::{fs::{canonicalize, rename}, path::{Path, PathBuf}};
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -27,21 +27,16 @@ use parser::Parser;
 ///
 /// This fails if either the template or the options for renaming have an error
 pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), TokenizeError> {
-    let files_to_rename = {
-        let mut files_to_rename_canonicalized = Vec::with_capacity(files_to_rename.len());
-
-        for path in files_to_rename {
-            files_to_rename_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let files_to_rename: Vec<PathBuf> =
+        files_to_rename.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
-                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                    continue;
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
                 }
-            });
-        }
-
-        files_to_rename_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("rename_files files_to_rename: {:?} new_filename_template: {}", files_to_rename, new_filename_template);
 

@@ -16,21 +16,16 @@ use log::{trace, debug, info, warn, error};
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
 pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(PathBuf, String, String)> {
-    let images_to_check = {
-        let mut images_to_check_canonicalized = Vec::with_capacity(images_to_check.len());
-
-        for path in images_to_check {
-            images_to_check_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let images_to_check: Vec<PathBuf> =
+        images_to_check.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
-                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                    continue;
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
                 }
-            });
-        }
-
-        images_to_check_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("check_image_formats images_to_check: {:?}", images_to_check);
 

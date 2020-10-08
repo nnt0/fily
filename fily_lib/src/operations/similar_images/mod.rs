@@ -31,24 +31,19 @@ struct Image {
 
 /// Finds images that are similar to each other
 pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(PathBuf, PathBuf)> {
-    let mut images_to_check = {
-        let mut images_to_check_canonicalized = Vec::with_capacity(images_to_check.len());
-
-        for path in images_to_check {
-            images_to_check_canonicalized.push(Image {
-                path: match canonicalize(path) {
-                    Ok(path) => path,
-                    Err(e) => {
-                        info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                        continue;
-                    }
-                },
-                hash: None,
-            });
-        }
-
-        images_to_check_canonicalized
-    };
+    let mut images_to_check: Vec<Image> =
+        images_to_check.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(Image {
+                    path,
+                    hash: None,
+                }),
+                Err(e) => {
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
+                }
+            }
+        }).collect();
 
     trace!("find_similar_images images_to_check: {:?} similar_images_options: {:?}", images_to_check, similar_images_options);
 

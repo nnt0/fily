@@ -1,4 +1,4 @@
-use std::{fs::{canonicalize, rename, create_dir_all}, error::Error, path::Path, io, fmt};
+use std::{fs::{canonicalize, rename, create_dir_all}, error::Error, path::{Path, PathBuf}, io, fmt};
 // use dialoguer::Confirm;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -42,21 +42,16 @@ pub fn move_files<T, U>(move_to: T, files_to_move: &[U], you_sure_prompt: bool) 
         }
     };
 
-    let files_to_move = {
-        let mut files_to_move_canonicalized = Vec::with_capacity(files_to_move.len());
-
-        for path in files_to_move {
-            files_to_move_canonicalized.push(match canonicalize(path) {
-                Ok(path) => path,
+    let files_to_move: Vec<PathBuf> =
+        files_to_move.iter().filter_map(|path| {
+            match canonicalize(path) {
+                Ok(path) => Some(path),
                 Err(e) => {
-                    info!("Error accessing {:?} {} skipping this file", path.as_ref().display(), e);
-                    continue;
+                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
+                    None
                 }
-            });
-        }
-
-        files_to_move_canonicalized
-    };
+            }
+        }).collect();
 
     trace!("move move_to: {:?} files_to_move: {:?} you_sure_prompt: {}", move_to.display(), files_to_move, you_sure_prompt);
 
