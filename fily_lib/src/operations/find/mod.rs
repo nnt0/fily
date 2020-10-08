@@ -321,7 +321,7 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
             })
             .collect();
 
-        if results.len() + matching_files.len() >= find_options.max_num_results {
+        if results.len() + matching_files.len() > find_options.max_num_results {
             // Shorten the vec in case there are too many items so we don't return more
             // paths than we should
             matching_files.truncate(find_options.max_num_results - results.len());
