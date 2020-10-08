@@ -17,7 +17,7 @@ pub use condition::Condition;
 /// provides a config that matches anything. So you only have to change the options
 /// you care about
 ///
-/// `options`: Contains a vec of Condition<SearchCriteria<'a>> with which you
+/// `options`: Contains a vec of `Condition<SearchCriteria<'a>>` with which you
 /// you can define what criteria a file should or should not match.
 /// I recommend reading the docs on `Condition` and `SearchCriteria`
 ///

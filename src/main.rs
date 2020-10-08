@@ -702,7 +702,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 get_stdin_as_lines()?
             };
-            let mut similar_images_options: SimilarImagesOptions = Default::default();
+            let mut similar_images_options = SimilarImagesOptions::default();
 
             similar_images_options.hash_alg = match args.value_of("hash_alg").unwrap() {
                 "mean" => HashAlg::Mean,
@@ -790,7 +790,7 @@ fn get_stdin_split(separator: &str) -> Result<Vec<String>, io::Error> {
     let mut input = String::new();
     stdin().lock().read_to_string(&mut input)?;
 
-    let input: Vec<String> = input.split(separator).map(|path_str| path_str.to_string()).collect();
+    let input: Vec<String> = input.split(separator).map(ToString::to_string).collect();
 
     Ok(input)
 }
