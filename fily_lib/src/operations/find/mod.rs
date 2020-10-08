@@ -304,15 +304,15 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
 
                 if find_options.ignore_hidden_files {
                     if let Some(name) = entry.file_name().to_str() {
-                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                         if name.starts_with('.') {
                             return None;
                         }
                     }
+                    // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                 }
 
                 // Checks if all Conditions match the file
-                // If any do not match the file gets filtered out
+                // If any do not match, the file gets filtered out
                 if find_options.options.iter().all(|option| option.evaluate(&entry).unwrap_or(false)) {
                     Some(entry.into_path())
                 } else {
