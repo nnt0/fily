@@ -758,6 +758,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Sets up the logger backend for `log`
+///
+/// Sends all logs to a file called `fily.log`
+///
+/// Possible log levels:
+/// * off
+/// * trace
+/// * debug
+/// * info
+/// * warn
+/// * error
 fn setup_logger(log_level: &str) -> Result<(), Box<dyn Error>> {
     let log_level = match log_level {
         "off" => log::LevelFilter::Off,
@@ -786,6 +797,9 @@ fn setup_logger(log_level: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Splits the input from stdin with `separator` and stores the resulting `String`s in a `Vec`
+///
+/// Fails if input is not valid UTF-8
 fn get_stdin_split(separator: &str) -> Result<Vec<String>, io::Error> {
     let mut input = String::new();
     stdin().lock().read_to_string(&mut input)?;
@@ -795,6 +809,9 @@ fn get_stdin_split(separator: &str) -> Result<Vec<String>, io::Error> {
     Ok(input)
 }
 
+/// Collects stdin into a `Vec`. Each `String` is a line that is either separated by \n or \r\n
+///
+/// Fails if stdin produces an error
 fn get_stdin_as_lines() -> Result<Vec<String>, io::Error> {
     let mut input = Vec::new();
 
