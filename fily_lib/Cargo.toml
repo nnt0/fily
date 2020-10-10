@@ -7,6 +7,8 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/nnt0/fily/fily_lib/"
 readme = "../README.md"
 categories = ["filesystem"]
+keywords = ["files"]
+description = "Provides functions that do stuff with files"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

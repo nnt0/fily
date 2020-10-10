@@ -67,12 +67,14 @@ impl<'a> FindOptionsBuilder<'a> {
     /// Creates and returns a new `FindOptionsBuilder`. The containing `FindOptions`
     /// is instantiated with its default implementation
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         FindOptionsBuilder::default()
     }
 
     /// Builds the `FindOptions` and returns it
     #[inline]
+    #[must_use]
     pub fn build(self) -> FindOptions<'a> {
         self.find_options
     }
