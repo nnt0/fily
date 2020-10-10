@@ -64,22 +64,27 @@ pub struct FindOptionsBuilder<'a> {
 }
 
 impl<'a> FindOptionsBuilder<'a> {
+    /// Creates and returns a new `FindOptionsBuilder`. The containing `FindOptions`
+    /// is instantiated with its default implementation
     #[inline]
     pub fn new() -> Self {
         FindOptionsBuilder::default()
     }
 
+    /// Builds the `FindOptions` and returns it
     #[inline]
     pub fn build(self) -> FindOptions<'a> {
         self.find_options
     }
 
+    /// Adds a single `condition` to the list of conditions
     #[inline]
     pub fn add_condition(&mut self, condition: Condition<SearchCriteria<'a>>) -> &mut Self {
         self.find_options.options.push(condition);
         self
     }
 
+    /// Adds all `Condition`s in `conditions` to the list of conditions
     #[inline]
     pub fn add_conditions(&mut self, mut conditions: Vec<Condition<SearchCriteria<'a>>>) -> &mut Self {
         self.find_options.options.append(&mut conditions);
@@ -134,44 +139,60 @@ impl<'a> FindOptionsBuilder<'a> {
         self
     }
 
-    /// Adds a condition from a `str`. This can fail.
+    /// Adds a condition from a `&str`. This can fail.
     /// Also this isn't actually implemented right now so it'll just panic if you call this
     #[inline]
     pub fn add_condition_from_str(&mut self, condition_str: &str) -> Result<&mut Self, Box<dyn Error>> {
         self.find_options.options.push(condition_str.try_into()?);
+
         Ok(self)
     }
 
+    /// Sets the maximum number of paths returned
+    ///
+    /// Default is unlimited
     #[inline]
     pub fn set_max_num_results(&mut self, max_num_results: usize) -> &mut Self {
         self.find_options.max_num_results = max_num_results;
         self
     }
 
+    /// Sets how many subfolders deep it'll search at max
+    ///
+    /// Default is unlimited
     #[inline]
     pub fn set_max_search_depth(&mut self, max_search_depth: usize) -> &mut Self {
         self.find_options.max_search_depth = max_search_depth;
         self
     }
 
+    /// Sets how many subfolders deep it should start searching. This should be less or equals
+    /// to the amount of subfolders deep it'll go at max or otherwise it'll always return
+    /// exactly zero results
+    ///
+    /// Default is 0
     #[inline]
     pub fn set_min_depth_from_start(&mut self, min_depth_from_start: usize) -> &mut Self {
         self.find_options.min_depth_from_start = min_depth_from_start;
         self
     }
 
+    /// Sets if it should either ignore all files or all folders
     #[inline]
     pub fn set_ignored_files(&mut self, ignored_files: Ignore) -> &mut Self {
         self.find_options.ignore = Some(ignored_files);
         self
     }
 
+    /// Sets if it should ignore files or folders that start with a `.`
     #[inline]
     pub fn set_ignore_hidden_files(&mut self, ignore_hidden_files: bool) -> &mut Self {
         self.find_options.ignore_hidden_files = ignore_hidden_files;
         self
     }
 
+    /// Sets if it should follow symlinks. If this is `false` it will check any criteria against the
+    /// symlink file and see if it matches, not against the file the symlink points to
     #[inline]
     pub fn set_follow_symlinks(&mut self, follow_symlinks: bool) -> &mut Self {
         self.find_options.follow_symlinks = follow_symlinks;
