@@ -178,9 +178,11 @@ impl<'a> FindOptionsBuilder<'a> {
     }
 
     /// Sets if it should either ignore all files or all folders
+    ///
+    /// `None` resets it to ignoring nothing
     #[inline]
-    pub fn set_ignored_files(&mut self, ignored_files: Ignore) -> &mut Self {
-        self.find_options.ignore = Some(ignored_files);
+    pub fn set_ignored_files(&mut self, ignored_files: Option<Ignore>) -> &mut Self {
+        self.find_options.ignore = ignored_files;
         self
     }
 

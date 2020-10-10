@@ -629,11 +629,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if args.is_present("ignore") {
                 find_options_builder.set_ignored_files(
-                    match args.value_of("ignore").unwrap() {
+                    Some(match args.value_of("ignore").unwrap() {
                         "files" => Ignore::Files,
                         "folders" => Ignore::Folders,
                         _ => unreachable!("Someone messed with the possible values"),
-                    }
+                    })
                 );
             }
 
