@@ -26,25 +26,21 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(P
 
     trace!("find_duplicate_files_hash files_to_check: {:?}", files_to_check);
 
-    let mut files_to_check = {
-        let mut files = Vec::with_capacity(files_to_check.len());
+    let mut files_to_check: Vec<FileWithHash<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
+        let len = match path.metadata() {
+            Ok(metadata) => metadata.len(),
+            Err(e) => {
+                info!("Error accessing {:?} {}", path.display(), e);
+                return None;
+            }
+        };
 
-        for path in files_to_check {
-            files.push(FileWithHash {
-                len: match path.metadata() {
-                    Ok(metadata) => metadata.len(),
-                    Err(e) => {
-                        info!("Error accessing {:?} {}", path.display(), e);
-                        continue;
-                    }
-                },
-                path,
-                hash: None,
-            });
-        }
-
-        files
-    };
+        Some(FileWithHash {
+            len,
+            path,
+            hash: None,
+        })
+    }).collect();
 
     let hasher = Hasher::new();
     let mut duplicates = Vec::new();
@@ -130,25 +126,21 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBu
 
     trace!("find_duplicate_files files_to_check: {:?}", files_to_check);
 
-    let mut files_to_check = {
-        let mut files = Vec::with_capacity(files_to_check.len());
+    let mut files_to_check: Vec<File<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
+        let len = match path.metadata() {
+            Ok(metadata) => metadata.len(),
+            Err(e) => {
+                info!("Error accessing {:?} {}", path.display(), e);
+                return None;
+            }
+        };
 
-        for path in files_to_check {
-            files.push(File {
-                len: match path.metadata() {
-                    Ok(metadata) => metadata.len(),
-                    Err(e) => {
-                        info!("Error accessing {:?} {}", path.display(), e);
-                        continue;
-                    }
-                },
-                path,
-                contents: None,
-            });
-        }
-
-        files
-    };
+        Some(File {
+            len,
+            path,
+            contents: None,
+        })
+    }).collect();
 
     let mut duplicates = Vec::new();
     let files_to_check_len = files_to_check.len();
