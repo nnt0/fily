@@ -30,7 +30,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(P
         let len = match path.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
-                info!("Error accessing {:?} {}", path.display(), e);
+                info!("Error accessing {:?} {} ignoring this file", path.display(), e);
                 return None;
             }
         };
@@ -130,7 +130,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBu
         let len = match path.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
-                info!("Error accessing {:?} {}", path.display(), e);
+                info!("Error accessing {:?} {} ignoring this file", path.display(), e);
                 return None;
             }
         };
