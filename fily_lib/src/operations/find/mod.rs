@@ -276,13 +276,13 @@ impl TryFrom<&str> for SearchCriteria {
     /// `modified_*`, `accessed_*` and `created_*` expect a number that is a timestamp relative to
     /// the unix epoch in seconds. This number can be negative
     fn try_from(search_criteria_str: &str) -> Result<Self, Self::Error> {
-        let parts: Vec<&str> = search_criteria_str.splitn(2, '=').collect();
+        let parts: Vec<&str> = search_criteria_str.trim().splitn(2, '=').collect();
 
         if parts.len() == 1 {
             return Err(SearchCriteriaParsingError::NoValue);
         }
 
-        let criteria_name = parts[0].trim();
+        let criteria_name = parts[0];
         let value = parts[1].to_string();
 
         Ok(match criteria_name {
