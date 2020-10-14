@@ -1,21 +1,17 @@
-use std::{fs::{canonicalize, rename, create_dir_all}, error::Error, path::{Path, PathBuf}, io, fmt};
+use std::{fs::{canonicalize, rename, create_dir_all}, path::{Path, PathBuf}, io};
+use thiserror::Error;
 // use dialoguer::Confirm;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MoveFilesError {
+    #[error("The path to which the files should be moved to doesn't exist. Failed trying to create it")]
     CouldNotCreateMoveToPath(io::Error),
+    #[error("The path to which the files should be moved to points to a file. The path has to point to a folder")]
     MoveToPointsToAFile,
+    #[error("An error occured while getting info on the path to which the files should be moved to")]
     IOError(io::Error),
-}
-
-impl Error for MoveFilesError {}
-
-impl fmt::Display for MoveFilesError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 /// Moves all files from one place to another

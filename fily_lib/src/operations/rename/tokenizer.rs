@@ -1,31 +1,29 @@
-use std::{error::Error, fmt};
 use logos::{Lexer, Logos};
-// use super::RenameFilesError;
+use thiserror::Error;
+use super::RenameFilesError;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(Error, PartialEq, Eq, Debug, Clone, Copy)]
 pub enum TokenizeError {
     // TODO: Remove the UnknownError variant once we can return the actual error
+    #[error("Something went wrong during tokenizing but we don't know what because that one library I use doesn't support returning errors containing enums and it's really annoying so this is a placeholder until it gets implemented. Good luck figuring out whats wrong with you input")]
     UnknownError,
+    #[error("A variable was empty")]
     EmptyVariable,
+    #[error("An unknown variable was passed")]
     UnknownVariable,
+    #[error("Failed to parse the value of an option or there was none even though there should've been one")]
     MalformedOption,
+    #[error("An unknown option was passed")]
+    UnknownOption,
 }
 
-impl Error for TokenizeError {}
-
-impl fmt::Display for TokenizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+impl From<TokenizeError> for RenameFilesError {
+    fn from(error: TokenizeError) -> Self {
+        RenameFilesError::TokenizeError(error)
     }
 }
-
-// impl From<TokenizeError> for RenameFilesError {
-//     fn from(error: TokenizeError) -> Self {
-//         RenameFilesError::TokenizeError(error)
-//     }
-// }
 
 #[derive(Logos, PartialEq, Eq, Debug, Clone, Copy)]
 pub enum FilenamePart<'a> {
@@ -83,7 +81,7 @@ fn parse_options(options: &[&str]) -> Result<FilenameOptions, TokenizeError> {
             }
             _ => {
                 debug!("Unknown option {:?} skipping it", option);
-                return Err(TokenizeError::MalformedOption);
+                return Err(TokenizeError::UnknownOption);
             }
         };
     }

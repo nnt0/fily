@@ -1,22 +1,27 @@
-use std::{ffi::OsStr, path::Path, error::Error, fmt, io};
+use std::{ffi::OsStr, path::Path, io};
+use super::RenameFilesError;
 use super::tokenizer::{FilenamePart, FilenameVariable};
+use thiserror::Error;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ParseError {
+    #[error("Failed to get the filename because the path either end with .. or there is no final component")]
     FilenameNoBase,
+    #[error("Failed to get the filename base because there is no filename")]
     NoFilename,
+    #[error("Failed to convert a filename to UTF-8")]
     UTF8ConversionFailed,
+    #[error("Something went wrong during tokenizing, check your template")]
     TokenizeErrorInTokens,
+    #[error("Failed to get info on a file")]
     IOError(io::Error),
 }
 
-impl Error for ParseError {}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+impl From<ParseError> for RenameFilesError {
+    fn from(error: ParseError) -> Self {
+        RenameFilesError::ParsingError(error)
     }
 }
 

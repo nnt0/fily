@@ -1,4 +1,5 @@
 use std::{fs::{canonicalize, rename}, path::{Path, PathBuf}};
+use thiserror::Error;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -6,20 +7,15 @@ mod tokenizer;
 use tokenizer::{tokenize, FilenamePart, TokenizeError};
 
 mod parser;
-use parser::Parser;
+use parser::{Parser, ParseError};
 
-// #[derive(Eq, PartialEq, Clone, Copy, Debug)]
-// pub enum RenameFilesError {
-//     TokenizeError(TokenizeError),
-// }
-
-// impl Error for RenameFilesError {}
-
-// impl fmt::Display for RenameFilesError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(f, "{:?}", self)
-//     }
-// }
+#[derive(Error, Debug)]
+pub enum RenameFilesError {
+    #[error("Something went wrong during tokenizing")]
+    TokenizeError(TokenizeError),
+    #[error("Something went wrong during parsing")]
+    ParsingError(ParseError),
+}
 
 /// Renames all files based on a template
 ///
