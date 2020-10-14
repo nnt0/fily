@@ -1,6 +1,7 @@
-use std::{path::{Path, PathBuf}, error::Error, fs::canonicalize, convert::TryInto};
+use std::{path::{Path, PathBuf}, error::Error, fs::canonicalize, convert::{TryInto, TryFrom}, num::ParseIntError};
 use walkdir::WalkDir;
 use rayon::prelude::*;
+use thiserror::Error;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -34,8 +35,8 @@ pub use condition::Condition;
 ///
 /// `follow_symlinks`: if it should follow any symlinks and search in there too
 #[derive(Clone, Debug)]
-pub struct FindOptions<'a> {
-    pub options: Vec<Condition<SearchCriteria<'a>>>,
+pub struct FindOptions {
+    pub options: Vec<Condition<SearchCriteria>>,
     pub max_num_results: usize,
     pub max_search_depth: usize,
     pub min_depth_from_start: usize,
@@ -44,7 +45,7 @@ pub struct FindOptions<'a> {
     pub follow_symlinks: bool,
 }
 
-impl<'a> Default for FindOptions<'a> {
+impl Default for FindOptions {
     fn default() -> Self {
         FindOptions {
             options: Vec::new(),
@@ -59,11 +60,11 @@ impl<'a> Default for FindOptions<'a> {
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct FindOptionsBuilder<'a> {
-    find_options: FindOptions<'a>
+pub struct FindOptionsBuilder {
+    find_options: FindOptions
 }
 
-impl<'a> FindOptionsBuilder<'a> {
+impl FindOptionsBuilder {
     /// Creates and returns a new `FindOptionsBuilder`. The containing `FindOptions`
     /// is instantiated with its default implementation
     #[inline]
@@ -75,26 +76,26 @@ impl<'a> FindOptionsBuilder<'a> {
     /// Builds the `FindOptions` and returns it
     #[inline]
     #[must_use]
-    pub fn build(self) -> FindOptions<'a> {
+    pub fn build(self) -> FindOptions {
         self.find_options
     }
 
     /// Adds a single `condition` to the list of conditions
     #[inline]
-    pub fn add_condition(&mut self, condition: Condition<SearchCriteria<'a>>) -> &mut Self {
+    pub fn add_condition(&mut self, condition: Condition<SearchCriteria>) -> &mut Self {
         self.find_options.options.push(condition);
         self
     }
 
     /// Adds all `Condition`s in `conditions` to the list of conditions
     #[inline]
-    pub fn add_conditions(&mut self, mut conditions: Vec<Condition<SearchCriteria<'a>>>) -> &mut Self {
+    pub fn add_conditions(&mut self, mut conditions: Vec<Condition<SearchCriteria>>) -> &mut Self {
         self.find_options.options.append(&mut conditions);
         self
     }
 
     /// Adds a condition that requires all of the search criterias in `search_criterias` to match
-    pub fn add_all_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+    pub fn add_all_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
@@ -110,7 +111,7 @@ impl<'a> FindOptionsBuilder<'a> {
     }
 
     /// Adds a condition that requires any (at least one) of the search criterias in `search_criterias` to match
-    pub fn add_any_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+    pub fn add_any_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
@@ -126,7 +127,7 @@ impl<'a> FindOptionsBuilder<'a> {
     }
 
     /// Adds a condition that requires none of the search criterias in `search_criterias` to match
-    pub fn add_nothing_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria<'a>>) -> &mut Self {
+    pub fn add_nothing_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
@@ -208,20 +209,161 @@ impl<'a> FindOptionsBuilder<'a> {
 ///
 /// Intended to be used with `Condition`
 #[derive(Clone, Debug)]
-pub enum SearchCriteria<'a> {
-    Filename(Filename<'a>),
+pub enum SearchCriteria {
+    Filename(Filename),
     Filesize(Filesize),
-    FilePath(FilePath<'a>),
-    FilenameRegex(&'a regex::Regex),
+    FilePath(FilePath),
+    FilenameRegex(regex::Regex),
     Modified(Modified),
     Accessed(Accessed),
     Created(Created)
 }
 
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum SearchCriteriaParsingError {
+    #[error("The criteria is missing the =<value> part")]
+    NoValue,
+    #[error("The criteria passed isn't known")]
+    UnknownCriteria,
+    #[error("Error parsing the value to a number")]
+    MalformedNumber,
+    #[error("Error parsing the regex")]
+    MalformedRegex(regex::Error),
+}
+
+impl From<ParseIntError> for SearchCriteriaParsingError {
+    fn from(_: ParseIntError) -> Self {
+        SearchCriteriaParsingError::MalformedNumber
+    }
+}
+
+impl From<regex::Error> for SearchCriteriaParsingError {
+    fn from(error: regex::Error) -> Self {
+        SearchCriteriaParsingError::MalformedRegex(error)
+    }
+}
+
+impl TryFrom<&str> for SearchCriteria {
+    type Error = SearchCriteriaParsingError;
+
+    /// Expects a criteria in this format: <criteria_name>=<value>
+    ///
+    /// Possible criterias are:
+    /// * `filename_exact`
+    /// * `filename_contains`
+    /// * `filesize_exact`
+    /// * `filesize_over`
+    /// * `filesize_under`
+    /// * `filepath_exact`
+    /// * `filepath_contains`
+    /// * `filenameregex`
+    /// * `modified_at`
+    /// * `modified_before`
+    /// * `modified_after`
+    /// * `accessed_at`
+    /// * `accessed_before`
+    /// * `accessed_after`
+    /// * `created_at`
+    /// * `created_before`
+    /// * `created_after`
+    ///
+    /// `filesize_*` and `filepath_*` expect a string
+    ///
+    /// `filesize_*` expects a number that is >= 0
+    ///
+    /// `filenameregex` expects a regex in string form
+    ///
+    /// `modified_*`, `accessed_*` and `created_*` expect a number that is a timestamp relative to
+    /// the unix epoch in seconds. This number can be negative
+    fn try_from(search_criteria_str: &str) -> Result<Self, Self::Error> {
+        let parts: Vec<&str> = search_criteria_str.splitn(2, '=').collect();
+
+        if parts.len() == 1 {
+            return Err(SearchCriteriaParsingError::NoValue);
+        }
+
+        let criteria_name = parts[0].trim();
+        let value = parts[1].to_string();
+
+        Ok(match criteria_name {
+            "filename_exact" => SearchCriteria::Filename(Filename::Exact(value)),
+            "filename_contains" => SearchCriteria::Filename(Filename::Contains(value)),
+            "filesize_exact" => {
+                let size = value.parse()?;
+
+                SearchCriteria::Filesize(Filesize::Exact(size))
+            }
+            "filesize_over" => {
+                let size = value.parse()?;
+
+                SearchCriteria::Filesize(Filesize::Over(size))
+            }
+            "filesize_under" => {
+                let size = value.parse()?;
+
+                SearchCriteria::Filesize(Filesize::Under(size))
+            }
+            "filepath_exact" => SearchCriteria::FilePath(FilePath::Exact(value)),
+            "filepath_contains" => SearchCriteria::FilePath(FilePath::Contains(value)),
+            "filenameregex" => {
+                let regex = regex::Regex::new(&value)?;
+
+                SearchCriteria::FilenameRegex(regex)
+            }
+            "modified_at" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Modified(Modified::At(timestamp))
+            }
+            "modified_before" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Modified(Modified::Before(timestamp))
+            }
+            "modified_after" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Modified(Modified::After(timestamp))
+            }
+            "accessed_at" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Accessed(Accessed::At(timestamp))
+            }
+            "accessed_before" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Accessed(Accessed::Before(timestamp))
+            }
+            "accessed_after" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Accessed(Accessed::After(timestamp))
+            }
+            "created_at" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Created(Created::At(timestamp))
+            }
+            "created_before" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Created(Created::Before(timestamp))
+            }
+            "created_after" => {
+                let timestamp = value.parse()?;
+
+                SearchCriteria::Created(Created::After(timestamp))
+            }
+            _ => return Err(SearchCriteriaParsingError::UnknownCriteria),
+        })
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Filename<'a> {
-    Exact(&'a str),
-    Contains(&'a str),
+pub enum Filename {
+    Exact(String),
+    Contains(String),
 }
 
 /// Filesize is in bytes
@@ -233,9 +375,9 @@ pub enum Filesize {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum FilePath<'a> {
-    Exact(&'a str),
-    Contains(&'a str),
+pub enum FilePath {
+    Exact(String),
+    Contains(String),
 }
 
 /// Time is in seconds and relative to the unix epoch (1970-01-01T00:00:00Z)
@@ -283,7 +425,7 @@ pub enum Ignore {
 ///
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
-pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions<'_>) -> Vec<PathBuf> {
+pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions) -> Vec<PathBuf> {
     let paths_to_search_in: Vec<PathBuf> =
         paths_to_search_in.iter().filter_map(|path| {
             match canonicalize(path) {

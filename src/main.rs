@@ -468,11 +468,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if args.is_present("filename_exact") {
                 find_options_builder.add_condition(
-                    Condition::Value(SearchCriteria::Filename(Filename::Exact(args.value_of("filename_exact").unwrap())))
+                    Condition::Value(SearchCriteria::Filename(Filename::Exact(args.value_of("filename_exact").unwrap().into())))
                 );
             } else if args.is_present("filename_contains") {
-                let criteria: Vec<SearchCriteria<'_>> =
-                    args.values_of("filename_contains").unwrap().map(|substring| SearchCriteria::Filename(Filename::Contains(substring))).collect();
+                let criteria: Vec<SearchCriteria> =
+                    args.values_of("filename_contains").unwrap().map(|substring| SearchCriteria::Filename(Filename::Contains(substring.into()))).collect();
 
                 find_options_builder.add_all_of_condition(criteria);
             }
@@ -589,14 +589,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                 );
             }
 
-            let path_exact: Vec<SearchCriteria<'_>> =
-                args.values_of("path_exact").unwrap_or_default().map(|path| SearchCriteria::FilePath(FilePath::Exact(path))).collect();
+            let path_exact: Vec<SearchCriteria> =
+                args.values_of("path_exact").unwrap_or_default().map(|path| SearchCriteria::FilePath(FilePath::Exact(path.into()))).collect();
             if !path_exact.is_empty() {
                 find_options_builder.add_all_of_condition(path_exact);
             }
 
-            let path_contains: Vec<SearchCriteria<'_>> =
-                args.values_of("path_contains").unwrap_or_default().map(|substring| SearchCriteria::FilePath(FilePath::Contains(substring))).collect();
+            let path_contains: Vec<SearchCriteria> =
+                args.values_of("path_contains").unwrap_or_default().map(|substring| SearchCriteria::FilePath(FilePath::Contains(substring.into()))).collect();
             if !path_contains.is_empty() {
                 find_options_builder.add_all_of_condition(path_contains);
             }
@@ -604,7 +604,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let regex_match: Vec<Regex> =
                 args.values_of("filename_regex").unwrap_or_default().map(|regex_str| Regex::new(regex_str).expect("invalid regex")).collect();
             if !regex_match.is_empty() {
-                let regex_match_criteria = regex_match.iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
+                let regex_match_criteria = regex_match.into_iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
 
                 find_options_builder.add_all_of_condition(regex_match_criteria);
             }
@@ -612,7 +612,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let regex_ignore: Vec<Regex> =
                 args.values_of("filename_regex_ignore").unwrap_or_default().map(|regex_str| Regex::new(regex_str).expect("invalid regex")).collect();
             if !regex_ignore.is_empty() {
-                let regex_ignore_criteria = regex_ignore.iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
+                let regex_ignore_criteria = regex_ignore.into_iter().map(|regex| SearchCriteria::FilenameRegex(regex)).collect();
 
                 find_options_builder.add_nothing_of_condition(regex_ignore_criteria);
             }

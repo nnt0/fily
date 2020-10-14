@@ -25,7 +25,7 @@ pub enum Condition<T> {
     Value(T),
 }
 
-impl<'a> TryFrom<&str> for Condition<SearchCriteria<'a>> {
+impl<'a> TryFrom<&str> for Condition<SearchCriteria> {
     type Error = &'static str;
 
     fn try_from(_condition_str: &str) -> Result<Self, Self::Error> {
@@ -33,7 +33,7 @@ impl<'a> TryFrom<&str> for Condition<SearchCriteria<'a>> {
     }
 }
 
-impl<'a> Condition<SearchCriteria<'a>> {
+impl<'a> Condition<SearchCriteria> {
     /// Checks if the file that `dir_entry` points to matches the condition
     ///
     /// Returns `true` if it does and `false` if it doesn't
@@ -63,7 +63,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         }
     }
 
-    fn filename_matches(dir_entry: &DirEntry, filename_options: &Filename<'_>) -> Result<bool, ()> {
+    fn filename_matches(dir_entry: &DirEntry, filename_options: &Filename) -> Result<bool, ()> {
         let path = dir_entry.path();
         let filename = if let Some(filename_osstr) = path.file_name() {
             if let Some(filename) = filename_osstr.to_str() {
@@ -77,7 +77,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
             return Err(());
         };
 
-        Ok(match *filename_options {
+        Ok(match filename_options {
             Filename::Exact(exact_name) => filename == exact_name,
             Filename::Contains(substring) => filename.contains(substring),
         })
@@ -99,7 +99,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
         })
     }
 
-    fn filepath_matches(dir_entry: &DirEntry, filepath_options: &FilePath<'_>) -> Result<bool, ()> {
+    fn filepath_matches(dir_entry: &DirEntry, filepath_options: &FilePath) -> Result<bool, ()> {
         let path = dir_entry.path();
         let path = if let Some(path) = dir_entry.path().as_os_str().to_str() {
             path
@@ -108,7 +108,7 @@ impl<'a> Condition<SearchCriteria<'a>> {
             return Err(());
         };
 
-        Ok(match *filepath_options {
+        Ok(match filepath_options {
             FilePath::Exact(exact_path) => path == exact_path,
             FilePath::Contains(substring) => path.contains(substring),
         })
