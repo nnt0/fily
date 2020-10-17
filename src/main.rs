@@ -28,6 +28,17 @@ use fily_lib::operations::{
 //       * add IsFile and IsFolder SearchCriteria?
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // Doing this so the Display impl of the error gets used
+    // It isn't shown if we just return the error
+    if let Err(e) = start() {
+        eprintln!("{}", e);
+        return Err(Box::from(e));
+    }
+
+    Ok(())
+}
+
+fn start() -> Result<(), Box<dyn Error>> {
     let app = App::new(crate_name!())
         .about("Does stuff with files")
         .version(crate_version!())
