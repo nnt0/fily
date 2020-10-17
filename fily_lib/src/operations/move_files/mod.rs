@@ -1,6 +1,5 @@
 use std::{fs::{canonicalize, rename, create_dir_all}, path::{Path, PathBuf}, io};
 use thiserror::Error;
-// use dialoguer::Confirm;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -19,7 +18,7 @@ pub enum MoveFilesError {
 /// # Errors
 ///
 /// Fails if `move_to` does not exist and it fails to create it, if `move_to` points to a file or if an error occurs canonicalizing `move_to`
-pub fn move_files<T, U>(move_to: T, files_to_move: &[U], you_sure_prompt: bool) -> Result<(), MoveFilesError> where
+pub fn move_files<T, U>(move_to: T, files_to_move: &[U]) -> Result<(), MoveFilesError> where
     T: AsRef<Path>,
     U: AsRef<Path> {
     let move_to = move_to.as_ref();
@@ -49,7 +48,7 @@ pub fn move_files<T, U>(move_to: T, files_to_move: &[U], you_sure_prompt: bool) 
             }
         }).collect();
 
-    trace!("move move_to: {:?} files_to_move: {:?} you_sure_prompt: {}", move_to.display(), files_to_move, you_sure_prompt);
+    trace!("move move_to: {:?} files_to_move: {:?}", move_to.display(), files_to_move);
 
     match move_to.metadata() {
         Ok(metadata) => if metadata.file_type().is_file() {
@@ -61,13 +60,6 @@ pub fn move_files<T, U>(move_to: T, files_to_move: &[U], you_sure_prompt: bool) 
             return Err(MoveFilesError::IOError(e));
         }
     };
-
-    // For some reason we get errors if this is used in a pipe. Not sure why. I'll just uncomment it for now
-    // Not sure if this is even useful
-    // if you_sure_prompt && !Confirm::new().with_prompt(format!("Moving {} files to {} . Are you sure?", files_to_move.len(), move_to.display())).default(false).interact()? {
-    //     debug!("Aborting because of negative prompt response");
-    //     return Ok(());
-    // }
 
     for old_path in files_to_move {
         let mut new_path = move_to.clone();
