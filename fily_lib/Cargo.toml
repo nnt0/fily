@@ -13,13 +13,22 @@ description = "Provides functions that do stuff with files"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.11"
-regex = "1.4.1"
-logos = "0.11.4"
-walkdir = "2.3.1"
-img_hash = "3.1.0"
-image = "0.23.9"
-crc32fast = "1.2.0"
-filetime = "0.2.12"
-rayon = "1.4.1"
-thiserror = "1.0.21"
+log = { version = "0.4.11", optional = true }
+regex = { version = "1.4.1", optional = true }
+logos = { version = "0.11.4", optional = true }
+walkdir = { version = "2.3.1", optional = true }
+img_hash = { version = "3.1.0", optional = true }
+image = { version = "0.23.9", optional = true }
+crc32fast = { version = "1.2.0", optional = true }
+filetime = { version = "0.2.12", optional = true }
+rayon = { version = "1.4.1", optional = true }
+thiserror = { version = "1.0.21", optional = true }
+
+[features]
+default = ["check_image_formats", "duplicates", "find", "move_files", "rename", "similar_images"]
+check_image_formats = ["log", "image"]
+duplicates = ["log", "crc32fast"]
+find = ["log", "thiserror", "walkdir", "regex", "rayon", "filetime"]
+move_files = ["log"]
+rename = ["log", "logos"]
+similar_images = ["log", "img_hash"]
