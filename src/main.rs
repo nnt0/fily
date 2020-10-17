@@ -373,12 +373,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .long("move_to")
                         .help("A path to which the files get moved to. Has to point to a folder")
                 )
-                .arg(
-                    Arg::with_name("no_prompt")
-                        .short("n")
-                        .long("no_prompt")
-                        .help("Don't create a prompt asking if you're sure")   
-                )
         )
         .subcommand(
             SubCommand::with_name("similar_images")
@@ -692,9 +686,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 get_stdin_as_lines()?
             };
             let move_to = args.value_of("move_to").unwrap();
-            let you_sure_prompt = !args.is_present("no_prompt");
 
-            move_files(move_to, &files_to_move, you_sure_prompt)?;
+            move_files(move_to, &files_to_move)?;
         }
         ("similar_images", Some(args)) => {
             let images_to_check = if app.is_present("input_path_separator") {
