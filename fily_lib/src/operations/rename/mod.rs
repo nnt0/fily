@@ -38,7 +38,7 @@ pub enum RenameFilesError {
 /// # Errors
 ///
 /// This fails if either the template or the options for renaming have an error
-pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), TokenizeError> {
+pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), RenameFilesError> {
     let files_to_rename: Vec<PathBuf> =
         files_to_rename.iter().filter_map(|path| {
             match canonicalize(path) {
@@ -57,7 +57,7 @@ pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template
     if filename_tokenized.contains(&FilenamePart::Error) {
         info!("Tokenize error");
         // TODO: This should just return the actual Error but we have to wait until Logos supports returning actual errors
-        return Err(TokenizeError::UnknownError);
+        return Err(RenameFilesError::TokenizeError(TokenizeError::UnknownError));
     }
 
     let options = options?;
