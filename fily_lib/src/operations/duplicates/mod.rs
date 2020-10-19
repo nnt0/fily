@@ -126,7 +126,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBu
 
     trace!("find_duplicate_files files_to_check: {:?}", files_to_check);
 
-    let mut files_to_check: Vec<File<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
+    let mut files_to_check: Vec<FileWithContents<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
         let len = match path.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
@@ -135,7 +135,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBu
             }
         };
 
-        Some(File {
+        Some(FileWithContents {
             len,
             path,
             contents: None,
@@ -192,7 +192,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBu
     duplicates
 }
 
-struct File<T: AsRef<Path>> {
+struct FileWithContents<T: AsRef<Path>> {
     path: T,
     len: u64,
     contents: Option<Vec<u8>>,
