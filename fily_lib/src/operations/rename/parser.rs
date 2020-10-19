@@ -21,7 +21,7 @@ pub enum ParseError {
 
 impl From<ParseError> for RenameFilesError {
     fn from(error: ParseError) -> Self {
-        RenameFilesError::ParsingError(error)
+        Self::ParsingError(error)
     }
 }
 
@@ -40,6 +40,11 @@ impl Parser {
     }
 
     /// Turns a list of `FilenamePart`s into a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if either there was a `FilenamePart::Error` in `tokens` or
+    /// if something went wrong getting info on a file
     pub fn parse_filename<'a>(&mut self, tokens: &[FilenamePart<'a>], path: impl AsRef<Path>) -> Result<String, ParseError> {
         let mut parsed_filename = String::new();
 
@@ -57,6 +62,9 @@ impl Parser {
         Ok(parsed_filename)
     }
 
+    /// Produces a string from a single `FilenameVariable`
+    ///
+    /// Output may change depending on where `path` points to
     fn parse_filename_variable(&mut self, variable: FilenameVariable, path: impl AsRef<Path>) -> Result<String, ParseError> {
         let path = path.as_ref();
         Ok(match variable {
@@ -106,12 +114,14 @@ impl Parser {
     }
 }
 
+/// Used to build a `Parser`
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct ParserBuilder {
     parser: Parser,
 }
 
 impl ParserBuilder {
+    /// Creates a new builder
     #[inline]
     pub fn new() -> Self {
         ParserBuilder {
@@ -130,6 +140,7 @@ impl ParserBuilder {
         self
     }
 
+    /// Builds and returns the resulting `Parser`
     #[inline]
     pub fn build(self) -> Parser {
         self.parser

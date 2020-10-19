@@ -49,6 +49,21 @@ pub struct FilenameOptions {
     pub incrementing_number_starts_at: isize,
 }
 
+/// Turns a template for `rename` into a list of tokens and options for it
+///
+/// Read the docs of the `rename` function for an explanation on how the template has to look like
+///
+/// The options always get returned even if there were no options in `text`
+///
+/// # Errors
+///
+/// The `Vec` of `FilenamePart`s can include a `FilenamePart::Error` if there is an error in the template
+///
+/// Unfortunately it can't tell you what exactly went wrong because the library I'm using dosn't support
+/// it yet...
+///
+/// The parsing of the options can fail. Look at the docs of the `rename` function to see how the options
+/// should look like
 #[inline]
 pub fn tokenize(text: &str) -> (Vec<FilenamePart<'_>>, Result<FilenameOptions, TokenizeError>) {
     let parts: Vec<&str> = text.split('|').collect();

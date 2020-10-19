@@ -260,8 +260,8 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                         if name.starts_with('.') {
                             return None;
                         }
-                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                     }
+                    // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                 }
 
                 // Checks if all Conditions match the file

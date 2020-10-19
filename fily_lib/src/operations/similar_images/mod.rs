@@ -30,6 +30,14 @@ struct Image {
 }
 
 /// Finds images that are similar to each other
+///
+/// You can specify on how exactly it should find the pictures with `SimilarImagesOptions`
+///
+/// I recommend reading the docs of the crate `img_hash` for an explanation on what the hash
+/// algorithms und filters do
+///
+/// If you're lazy you can just use `SimilarImagesOptions::default()` for a configuration
+/// that works decently well
 pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(PathBuf, PathBuf)> {
     let mut images_to_check: Vec<Image> =
         images_to_check.iter().filter_map(|path| {

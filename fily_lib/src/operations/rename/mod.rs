@@ -19,6 +19,22 @@ pub enum RenameFilesError {
 
 /// Renames all files based on a template
 ///
+/// Template rules and behaviour:
+///
+/// Normal text will just be used directly in the name, anything within `{` and `}` will be interpreted as a variable which value can change for every file. The value of the variable will be inserted where the variable was in the template.
+///
+/// You can choose from a couple different variables:
+///
+/// * `filename` The current filename
+/// * `filename_extension` The extension of the filename without the `.`. If there is no extension this will be an empty string
+/// * `filename_base` The base of the filename. If there is no extension this is the same as `filename`
+/// * `filesize` The size of the file in bytes
+/// * `incrementing_number` A number that will increment by one after each file. By default it starts at 0 but you can change the starting point
+///
+/// There are also options for the template. Everything after the first `|` will be interpreted as such. Currently there is only one option:
+///
+/// * `incrementing_number_starts_at` Sets the starting point of `incrementing_number`. The number can be negative. Should be used like this: `{incrementing_number}|incrementing_number_starts_at=42`
+///
 /// # Errors
 ///
 /// This fails if either the template or the options for renaming have an error
