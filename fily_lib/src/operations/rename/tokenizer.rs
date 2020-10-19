@@ -13,7 +13,7 @@ pub enum TokenizeError {
     EmptyVariable,
     #[error("An unknown variable was passed")]
     UnknownVariable,
-    #[error("Failed to parse the value of an option or there was none even though there should've been one")]
+    #[error("Failed to parse the value of an option or there was no value even though there should've been one")]
     MalformedOption,
     #[error("An unknown option was passed")]
     UnknownOption,
