@@ -27,13 +27,19 @@ impl From<ParseError> for RenameFilesError {
 
 /// Used to parse a sequence of `FilenamePart`s to a `String`
 ///
-/// Use `Parser::builder` to build
-#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+/// Use `Parser::builder` to build or instantiate directly with `Default` or `Parser::new` if you don't need to change
+/// the starting point of the incrementing number from 0
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Default)]
 pub struct Parser {
     incrementing_number: isize,
 }
 
 impl Parser {
+    #[inline]
+    pub fn new() -> Self {
+        Parser::default()
+    }
+
     #[inline]
     pub fn builder() -> ParserBuilder {
         ParserBuilder::new()
