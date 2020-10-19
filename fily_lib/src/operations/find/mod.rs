@@ -17,7 +17,7 @@ pub use condition::Condition;
 /// provides a config that matches anything. So you only have to change the options
 /// you care about
 ///
-/// `options`: Contains a vec of `Condition<SearchCriteria<'a>>` with which you
+/// `options`: Contains a vec of `Condition<SearchCriteria>` with which you
 /// you can define what criteria a file should or should not match.
 /// I recommend reading the docs on `Condition` and `SearchCriteria`
 ///
@@ -232,6 +232,7 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
             .max_depth(find_options.max_search_depth)
             .follow_links(find_options.follow_symlinks)
             .into_iter()
+            // Honestly not sure if this is even useful
             .collect::<Vec<Result<_, _>>>()
             .into_par_iter()
             .filter_map(|entry| {
@@ -259,8 +260,8 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                         if name.starts_with('.') {
                             return None;
                         }
+                        // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                     }
-                    // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                 }
 
                 // Checks if all Conditions match the file
