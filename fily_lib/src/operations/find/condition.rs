@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use super::{Filename, Filesize, FilePath, Modified, Accessed, Created, SearchCriteria};
 use regex::Regex;
 use filetime::FileTime;
@@ -23,14 +22,6 @@ pub enum Condition<T> {
     And(Box<Condition<T>>, Box<Condition<T>>),
     Or(Box<Condition<T>>, Box<Condition<T>>),
     Value(T),
-}
-
-impl<'a> TryFrom<&str> for Condition<SearchCriteria> {
-    type Error = &'static str;
-
-    fn try_from(_condition_str: &str) -> Result<Self, Self::Error> {
-        todo!("no idea how to implement this");
-    }
 }
 
 impl<'a> Condition<SearchCriteria> {

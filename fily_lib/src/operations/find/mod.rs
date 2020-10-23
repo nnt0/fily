@@ -7,6 +7,11 @@ use log::{trace, debug, info, warn, error};
 mod condition;
 pub use condition::Condition;
 
+mod condition_try_from;
+
+mod search_criteria;
+pub use search_criteria::*;
+
 /// Stores options for `find`
 ///
 /// You can instantiate this struct directly but I recommend
