@@ -3,7 +3,9 @@ use thiserror::Error;
 
 /// Used to specify a criteria a file has to match
 ///
-/// Intended to be used with `Condition`
+/// There are criterias for the filename, filesize, path,
+/// filename but with a regex that has to match, the last time it was modified,
+/// the last time it was accessed and the time it was created
 #[derive(Clone, Debug)]
 pub enum SearchCriteria {
     Filename(Filename),

@@ -35,11 +35,13 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Creates and returns a new `Parser` initiated with the default impl
     #[inline]
     pub fn new() -> Self {
         Parser::default()
     }
 
+    /// Creates and returns a new `ParserBuilder`
     #[inline]
     pub fn builder() -> ParserBuilder {
         ParserBuilder::new()

@@ -32,7 +32,7 @@ pub use condition::Condition;
 ///
 /// `ignore_hidden_files`: ignore all files that start with a dot
 ///
-/// `follow_symlinks`: if it should follow any symlinks and search in there too
+/// `follow_symlinks`: if it should follow symlinks and search in there too
 #[derive(Clone, Debug)]
 pub struct FindOptions {
     pub options: Vec<Condition<SearchCriteria>>,
