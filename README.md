@@ -1,6 +1,6 @@
 # fily
 
-Fily is a command line tool that combines multiple functions together that can be helpful when dealing with files, especially with a large number of them.
+fily is a command line tool that combines multiple functions together that can be helpful when dealing with files, especially with a large number of them.
 
 This project is a personal one. There probably are a lot of other programs out there that do similar if not the same things. If you choose to use this understand that I am not making any kind of guarantees about it working or even working correctly. There are definitely bugs in here that I just haven't found yet. I recommend always having logging on and setting the strict logging flag to make sure you can understand what happened if something ever goes wrong.
 
@@ -26,6 +26,8 @@ Currently every module besides `find` expects paths to the files it should work 
 You can use different ways of getting the paths to the files you want `fily` to work on as long as the paths are either separated by a new line or you specify their separator and they are sent to stdin.
 
 I also recommend that you always enable logging since `fily` will only report errors to stderr if the error causes the whole operation to fail. Otherwise it just logs them. If something didn't quite go like you expected it to or only some files were processed, check the logs.
+
+Also, if you use any operation besides `find` without piping the input it will just wait for input through stdin. You can directly paste what you want in there and then send EOF with Ctrl + D or Ctrl + Z depending on what platform you are on.
 
 ## Operations
 
