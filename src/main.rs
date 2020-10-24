@@ -817,13 +817,7 @@ fn get_stdin_split(separator: &str) -> Result<Vec<String>, io::Error> {
 ///
 /// Fails if stdin produces an error
 fn get_stdin_as_lines() -> Result<Vec<String>, io::Error> {
-    let mut input = Vec::new();
-
-    for line in stdin().lock().lines() {
-        input.push(line?);
-    }
-
-    input.shrink_to_fit();
-
-    Ok(input)
+    // collect() turns the array of Result<String, io::Error> to
+    // Result<Vec<String>, io::Error> because Result implements FromIter
+    stdin().lock().lines().collect()
 }
