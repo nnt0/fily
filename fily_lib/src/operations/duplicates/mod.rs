@@ -13,7 +13,7 @@ use log::{trace, debug, info, warn, error};
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
 pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path, &Path)> {
-    let files_to_check: Vec<&Path> = files_to_check.iter().map(|path| path.as_ref()).collect();
+    let files_to_check: Vec<&Path> = files_to_check.iter().map(AsRef::as_ref).collect();
 
     trace!("find_duplicate_files_hash files_to_check: {:?}", files_to_check);
 
@@ -104,7 +104,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
 pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path, &Path)> {
-    let files_to_check: Vec<&Path> = files_to_check.iter().map(|path| path.as_ref()).collect();
+    let files_to_check: Vec<&Path> = files_to_check.iter().map(AsRef::as_ref).collect();
 
     trace!("find_duplicate_files files_to_check: {:?}", files_to_check);
 

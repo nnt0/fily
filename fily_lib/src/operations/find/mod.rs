@@ -216,7 +216,7 @@ impl FindOptionsBuilder {
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
 pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions) -> Vec<PathBuf> {
-    let paths_to_search_in: Vec<&Path> = paths_to_search_in.iter().map(|path| path.as_ref()).collect();
+    let paths_to_search_in: Vec<&Path> = paths_to_search_in.iter().map(AsRef::as_ref).collect();
 
     trace!("find paths_to_search_in: {:?} find_options: {:?}", paths_to_search_in, find_options);
 

@@ -23,7 +23,7 @@ pub fn move_files<T, U>(move_to: T, files_to_move: &[U]) -> Result<(), MoveFiles
     U: AsRef<Path>
 {
     let move_to = move_to.as_ref();
-    let files_to_move: Vec<&Path> = files_to_move.iter().map(|path| path.as_ref()).collect();
+    let files_to_move: Vec<&Path> = files_to_move.iter().map(AsRef::as_ref).collect();
 
     trace!("move move_to: {:?} files_to_move: {:?}", move_to.display(), files_to_move);
 

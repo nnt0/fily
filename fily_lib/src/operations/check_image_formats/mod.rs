@@ -16,7 +16,7 @@ use log::{trace, debug, info, warn, error};
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
 pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(&Path, String, String)> {
-    let images_to_check: Vec<&Path> = images_to_check.iter().map(|path| path.as_ref()).collect();
+    let images_to_check: Vec<&Path> = images_to_check.iter().map(AsRef::as_ref).collect();
 
     trace!("check_image_formats images_to_check: {:?}", images_to_check);
 

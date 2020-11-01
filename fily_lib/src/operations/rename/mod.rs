@@ -39,7 +39,7 @@ pub enum RenameFilesError {
 ///
 /// This fails if either the template or the options for renaming have an error
 pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), RenameFilesError> {
-    let files_to_rename: Vec<&Path> = files_to_rename.iter().map(|path| path.as_ref()).collect();
+    let files_to_rename: Vec<&Path> = files_to_rename.iter().map(AsRef::as_ref).collect();
 
     trace!("rename_files files_to_rename: {:?} new_filename_template: {}", files_to_rename, new_filename_template);
 

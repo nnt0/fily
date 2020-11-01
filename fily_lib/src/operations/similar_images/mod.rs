@@ -39,7 +39,7 @@ struct Image<T: AsRef<Path>> {
 /// If you're lazy you can just use `SimilarImagesOptions::default()` for a configuration
 /// that works decently well
 pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(&Path, &Path)> {
-    let images_to_check: Vec<&Path> = images_to_check.iter().map(|path| path.as_ref()).collect();
+    let images_to_check: Vec<&Path> = images_to_check.iter().map(AsRef::as_ref).collect();
 
     trace!("find_similar_images images_to_check: {:?} similar_images_options: {:?}", images_to_check, similar_images_options);
 
