@@ -47,7 +47,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&
             let file = &mut files_to_check[i];
             let hash = match file.hash {
                 Some(_) => file.hash.take().unwrap(),
-                None => match read(&file.path) {
+                None => match read(file.path) {
                     Ok(contents) => {
                         let mut hasher = hasher.clone();
                         hasher.update(&contents);
@@ -63,7 +63,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&
             let other_file = &mut files_to_check[j];
             let other_hash = match other_file.hash {
                 Some(_) => other_file.hash.take().unwrap(),
-                None => match read(&other_file.path) {
+                None => match read(other_file.path) {
                     Ok(contents) => {
                         let mut hasher = hasher.clone();
                         hasher.update(&contents);
@@ -77,7 +77,7 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&
             };
 
             if hash == other_hash {
-                duplicates.push((files_to_check[i].path.clone(), files_to_check[j].path.clone()));
+                duplicates.push((files_to_check[i].path, files_to_check[j].path));
             }
 
             files_to_check[i].hash = Some(hash);
@@ -137,7 +137,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path,
             let file = &mut files_to_check[i];
             let contents = match file.contents {
                 Some(_) => file.contents.take().unwrap(),
-                None => match read(&file.path) {
+                None => match read(file.path) {
                     Ok(contents) => contents,
                     Err(e) => {
                         info!("Couldn't read {:?} {}", file.path.display(), e);
@@ -149,7 +149,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path,
             let other_file = &mut files_to_check[j];
             let other_contents = match other_file.contents {
                 Some(_) => other_file.contents.take().unwrap(),
-                None => match read(&other_file.path) {
+                None => match read(other_file.path) {
                     Ok(contents) => contents,
                     Err(e) => {
                         info!("Couldn't read {:?} {}", other_file.path.display(), e);
@@ -159,7 +159,7 @@ pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path,
             };
 
             if contents == other_contents {
-                duplicates.push((files_to_check[i].path.clone(), files_to_check[j].path.clone()));
+                duplicates.push((files_to_check[i].path, files_to_check[j].path));
             }
 
             files_to_check[i].contents = Some(contents);

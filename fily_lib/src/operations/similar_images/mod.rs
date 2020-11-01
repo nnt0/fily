@@ -122,7 +122,7 @@ pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images
             let distance = image1_hash.dist(image2_hash);
 
             if distance <= similar_images_options.threshold {
-                similar_images.push((images_to_check[i].path.clone(), images_to_check[j].path.clone()));
+                similar_images.push((images_to_check[i].path, images_to_check[j].path));
             }
         }
     }
