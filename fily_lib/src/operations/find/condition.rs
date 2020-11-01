@@ -24,7 +24,7 @@ pub enum Condition<T> {
     Value(T),
 }
 
-impl<'a> Condition<SearchCriteria> {
+impl Condition<SearchCriteria> {
     /// Checks if the file that `dir_entry` points to matches the condition
     ///
     /// Returns `true` if it does and `false` if it doesn't
