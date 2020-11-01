@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, fs::{read, canonicalize}};
+use std::{path::Path, fs::read};
 use crc32fast::Hasher;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -12,21 +12,12 @@ use log::{trace, debug, info, warn, error};
 /// don't accidentally delete a file that is not a duplicate you'll have to check them by hand.
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
-pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
-    let files_to_check: Vec<PathBuf> =
-        files_to_check.iter().filter_map(|path| {
-            match canonicalize(path) {
-                Ok(path) => Some(path),
-                Err(e) => {
-                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    None
-                }
-            }
-        }).collect();
+pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path, &Path)> {
+    let files_to_check: Vec<&Path> = files_to_check.iter().map(|path| path.as_ref()).collect();
 
     trace!("find_duplicate_files_hash files_to_check: {:?}", files_to_check);
 
-    let mut files_to_check: Vec<FileWithHash<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
+    let mut files_to_check: Vec<FileWithHash<&Path>> = files_to_check.into_iter().filter_map(|path| {
         let len = match path.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {
@@ -112,21 +103,12 @@ pub fn find_duplicate_files_hash<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(P
 /// If you know that you won't be able to provide the needed memory, use `find_duplicate_files_hash()`
 ///
 /// This will log any errors it encounters and just ignore the file that produced an error
-pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(PathBuf, PathBuf)> {
-    let files_to_check: Vec<PathBuf> =
-        files_to_check.iter().filter_map(|path| {
-            match canonicalize(path) {
-                Ok(path) => Some(path),
-                Err(e) => {
-                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    None
-                }
-            }
-        }).collect();
+pub fn find_duplicate_files<P: AsRef<Path>>(files_to_check: &[P]) -> Vec<(&Path, &Path)> {
+    let files_to_check: Vec<&Path> = files_to_check.iter().map(|path| path.as_ref()).collect();
 
     trace!("find_duplicate_files files_to_check: {:?}", files_to_check);
 
-    let mut files_to_check: Vec<FileWithContents<PathBuf>> = files_to_check.into_iter().filter_map(|path| {
+    let mut files_to_check: Vec<FileWithContents<&Path>> = files_to_check.into_iter().filter_map(|path| {
         let len = match path.metadata() {
             Ok(metadata) => metadata.len(),
             Err(e) => {

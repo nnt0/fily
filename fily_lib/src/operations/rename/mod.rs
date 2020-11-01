@@ -1,4 +1,4 @@
-use std::{fs::{canonicalize, rename}, path::{Path, PathBuf}};
+use std::{fs::rename, path::Path};
 use thiserror::Error;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -39,16 +39,7 @@ pub enum RenameFilesError {
 ///
 /// This fails if either the template or the options for renaming have an error
 pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template: &str) -> Result<(), RenameFilesError> {
-    let files_to_rename: Vec<PathBuf> =
-        files_to_rename.iter().filter_map(|path| {
-            match canonicalize(path) {
-                Ok(path) => Some(path),
-                Err(e) => {
-                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    None
-                }
-            }
-        }).collect();
+    let files_to_rename: Vec<&Path> = files_to_rename.iter().map(|path| path.as_ref()).collect();
 
     trace!("rename_files files_to_rename: {:?} new_filename_template: {}", files_to_rename, new_filename_template);
 

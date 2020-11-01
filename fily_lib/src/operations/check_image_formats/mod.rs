@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, fs::canonicalize};
+use std::path::Path;
 use image::{io::Reader, ImageFormat, ImageError, error::ImageFormatHint};
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
@@ -15,17 +15,8 @@ use log::{trace, debug, info, warn, error};
 ///
 /// If it encounters any errors while getting info on files it will just log it
 /// (assuming logging is turned on) and ignore the file where the error happened
-pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(PathBuf, String, String)> {
-    let images_to_check: Vec<PathBuf> =
-        images_to_check.iter().filter_map(|path| {
-            match canonicalize(path) {
-                Ok(path) => Some(path),
-                Err(e) => {
-                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    None
-                }
-            }
-        }).collect();
+pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> Vec<(&Path, String, String)> {
+    let images_to_check: Vec<&Path> = images_to_check.iter().map(|path| path.as_ref()).collect();
 
     trace!("check_image_formats images_to_check: {:?}", images_to_check);
 

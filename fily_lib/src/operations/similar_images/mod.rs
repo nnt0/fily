@@ -1,4 +1,4 @@
-use std::{path::{PathBuf, Path}, fs::canonicalize};
+use std::path::Path;
 use image::io::Reader;
 pub use img_hash::{HashAlg, FilterType};
 #[allow(unused_imports)]
@@ -24,8 +24,8 @@ impl Default for SimilarImagesOptions {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-struct Image {
-    path: PathBuf,
+struct Image<T: AsRef<Path>> {
+    path: T,
     hash: Option<img_hash::ImageHash>,
 }
 
@@ -38,22 +38,17 @@ struct Image {
 ///
 /// If you're lazy you can just use `SimilarImagesOptions::default()` for a configuration
 /// that works decently well
-pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(PathBuf, PathBuf)> {
-    let mut images_to_check: Vec<Image> =
-        images_to_check.iter().filter_map(|path| {
-            match canonicalize(path) {
-                Ok(path) => Some(Image {
-                    path,
-                    hash: None,
-                }),
-                Err(e) => {
-                    info!("Error accessing {:?} {} skipping this path", path.as_ref().display(), e);
-                    None
-                }
-            }
-        }).collect();
+pub fn find_similar_images<P: AsRef<Path>>(images_to_check: &[P], similar_images_options: SimilarImagesOptions) -> Vec<(&Path, &Path)> {
+    let images_to_check: Vec<&Path> = images_to_check.iter().map(|path| path.as_ref()).collect();
 
     trace!("find_similar_images images_to_check: {:?} similar_images_options: {:?}", images_to_check, similar_images_options);
+
+    let mut images_to_check: Vec<Image<&Path>> = images_to_check.into_iter().map(|path| {
+            Image {
+                path,
+                hash: None,
+            }
+        }).collect();
 
     let images_to_check_len = images_to_check.len();
     let hasher = img_hash::HasherConfig::new()
