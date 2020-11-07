@@ -674,20 +674,25 @@ fn start() -> Result<(), Box<dyn Error>> {
             };
             let use_hash_version = args.is_present("use_hash_version");
 
+            let result;
+
             if use_hash_version {
-                println!("{}", find_duplicate_files_hash(&files_to_check)
-                    .iter()
-                    .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-                );
+                result = find_duplicate_files_hash(&files_to_check);
             } else {
-                println!("{}", find_duplicate_files(&files_to_check)
-                    .iter()
-                    .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-                );
+                result = find_duplicate_files(&files_to_check);
+            }
+
+            println!("{}", result.0
+                .iter()
+                .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
+                .collect::<Vec<String>>()
+                .join("\n")
+            );
+
+            for (path, err) in result.1 {
+                let (err, err_msg) = err.destructure();
+
+                info!("{:?} {} {}", path.display(), err, err_msg);
             }
         }
         ("move", Some(args)) => {
