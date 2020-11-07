@@ -13,7 +13,7 @@ use fily_lib::operations::{
     find::{find, FindOptionsBuilder, Filename, Filesize, FilePath, Modified, Accessed, Created, Ignore, Condition, SearchCriteria},
     move_files::move_files,
     similar_images::{find_similar_images, SimilarImagesOptions, HashAlg, FilterType},
-    check_image_formats::check_image_formats,
+    check_image_formats::{check_image_formats, CheckImageFormatsError},
 };
 
 // TODO?: create a "create_file" module? How would that work? Naming? Contents?
@@ -749,12 +749,24 @@ fn start() -> Result<(), Box<dyn Error>> {
                 get_stdin_as_lines()?
             };
 
-            println!("{}", check_image_formats(&images_to_check)
+            let results = check_image_formats(&images_to_check);
+
+            println!("{}", results.0
                 .iter()
                 .map(|wrong_format_image| format!("{}, {}, {}", wrong_format_image.0.display(), wrong_format_image.1, wrong_format_image.2))
                 .collect::<Vec<String>>()
                 .join("\n")
             );
+
+            for (path, err) in results.1 {
+                let err_msg = match err {
+                    CheckImageFormatsError::ContentGuessError(fily_err) => fily_err.destructure().1,
+                    CheckImageFormatsError::UnknownPathExtension => "The paths extension is not known".to_string(),
+                    CheckImageFormatsError::NoPathExtension => "The path has no extension".to_string(),
+                };
+
+                info!("{:?} {}", path.display(), err_msg);
+            }
         }
         _ => eprintln!("Unknown subcommand"),
     };
