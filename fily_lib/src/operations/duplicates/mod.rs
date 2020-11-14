@@ -225,6 +225,7 @@ pub fn get_len_of_file(path: impl AsRef<Path>) -> Result<u64, FilyError<io::Erro
 }
 
 /// Calculates the crc32 of a bytes slice
+#[must_use]
 pub fn crc32_from_bytes(bytes: &[u8]) -> u32 {
     let mut hasher = Hasher::new();
 
