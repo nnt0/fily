@@ -94,7 +94,7 @@ impl Condition<SearchCriteria> {
 
     fn filesize_matches(dir_entry: &DirEntry, filesize_options: &Filesize) -> Result<bool, FilyError<io::Error>> {
         let filesize = dir_entry.metadata()
-            .map_err(|err| io::Error::from(err))
+            .map_err(io::Error::from)
             .with_context(|| format!("Failed to get metadata of {:?}", dir_entry.path().display()))?
             .len();
 
@@ -128,7 +128,7 @@ impl Condition<SearchCriteria> {
 
     fn modification_time_matches(dir_entry: &DirEntry, modified_options: &Modified) -> Result<bool, FilyError<io::Error>> {
         let metadata = dir_entry.metadata()
-            .map_err(|err| io::Error::from(err))
+            .map_err(io::Error::from)
             .with_context(|| format!("Failed to get metadata of {:?}", dir_entry.path().display()))?;
 
         let last_modification_time = FileTime::from_last_modification_time(&metadata).unix_seconds();
@@ -142,7 +142,7 @@ impl Condition<SearchCriteria> {
 
     fn access_time_matches(dir_entry: &DirEntry, access_options: &Accessed) -> Result<bool, FilyError<io::Error>> {
         let metadata = dir_entry.metadata()
-            .map_err(|err| io::Error::from(err))
+            .map_err(io::Error::from)
             .with_context(|| format!("Failed to get metadata of {:?}", dir_entry.path().display()))?;
 
         let last_access_time = FileTime::from_last_access_time(&metadata).unix_seconds();
@@ -156,7 +156,7 @@ impl Condition<SearchCriteria> {
 
     fn creation_time_matches(dir_entry: &DirEntry, creation_options: &Created) -> Result<bool, FilyError<io::Error>> {
         let metadata = dir_entry.metadata()
-            .map_err(|err| io::Error::from(err))
+            .map_err(io::Error::from)
             .with_context(|| format!("Failed to get metadata of {:?}", dir_entry.path().display()))?;
 
         let creation_time = FileTime::from_creation_time(&metadata)
