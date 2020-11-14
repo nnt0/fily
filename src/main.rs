@@ -766,13 +766,6 @@ fn start() -> Result<(), Box<dyn Error>> {
 
             let results = check_image_formats(&images_to_check);
 
-            println!("{}", results.0
-                .iter()
-                .map(|wrong_format_image| format!("{}, {}, {}", wrong_format_image.0.display(), wrong_format_image.1, wrong_format_image.2))
-                .collect::<Vec<String>>()
-                .join("\n")
-            );
-
             for (path, err) in results.1 {
                 let err_msg = match err {
                     CheckImageFormatsError::ContentGuessError(fily_err) => fily_err.destructure().1,
@@ -782,6 +775,13 @@ fn start() -> Result<(), Box<dyn Error>> {
 
                 info!("{:?} {}", path.display(), err_msg);
             }
+
+            println!("{}", results.0
+                .iter()
+                .map(|wrong_format_image| format!("{}, {}, {}", wrong_format_image.0.display(), wrong_format_image.1, wrong_format_image.2))
+                .collect::<Vec<String>>()
+                .join("\n")
+            );
         }
         _ => eprintln!("Unknown subcommand"),
     };
