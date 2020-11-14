@@ -6,7 +6,7 @@ use thiserror::Error;
 /// There are criterias for the filename, filesize, path,
 /// filename but with a regex that has to match, the last time it was modified,
 /// the last time it was accessed and the time it was created
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub enum SearchCriteria {
     Filename(Filename),
     Filesize(Filesize),
@@ -166,21 +166,21 @@ impl TryFrom<&str> for SearchCriteria {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Filename {
     Exact(String),
     Contains(String),
 }
 
 /// Filesize is in bytes
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Filesize {
     Exact(u64),
     Over(u64),
     Under(u64),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FilePath {
     Exact(String),
     Contains(String),
@@ -190,7 +190,7 @@ pub enum FilePath {
 ///
 /// The value it checks it against corresponds to the `mtime` field of `stat` on
 /// Unix platforms and the `ftLastWriteTime` field on Windows platforms
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Modified {
     At(i64),
     Before(i64),
@@ -201,7 +201,7 @@ pub enum Modified {
 ///
 /// The value it checks it against corresponds to the `atime` field of `stat` on
 /// Unix platforms and the `ftLastAccessTime` field on Windows platforms
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Accessed {
     At(i64),
     Before(i64),
@@ -212,14 +212,14 @@ pub enum Accessed {
 ///
 /// The value it checks it against corresponds to the `birthtime` field of `stat` on
 /// Unix platforms and the `ftCreationTime` field on Windows platforms
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Created {
     At(i64),
     Before(i64),
     After(i64),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Ignore {
     Files,
     Folders,

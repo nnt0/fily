@@ -1,10 +1,10 @@
-use std::{path::{Path, PathBuf}, error::Error, convert::TryInto};
+use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
 mod condition;
-pub use condition::Condition;
+pub use condition::{Condition, ConditionEvalError};
 
 mod condition_try_from;
 
@@ -15,17 +15,20 @@ mod find_options;
 pub use find_options::*;
 
 /// Finds files or directories that fit all of the criteria
-/// 
-/// The returned `Vec` can be empty if nothing was found
 ///
-/// If it encounters any errors while getting info on files it will just log it
-/// (assuming logging is turned on) and ignore the file where the error happened
-pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions) -> Vec<PathBuf> {
+/// This function returns a tuple of two `Vec`s. The first one contains paths to the files that
+/// matched all of the conditions. The second one contains the errors that occured during the
+/// evaluation of the conditions on a file. These files could theoretically also match the conditions
+/// but we don't know if they do since an error occured.
+/// 
+/// The returned `Vec`s can be empty if nothing was found or no error occured
+pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions) -> (Vec<PathBuf>, Vec<(PathBuf, ConditionEvalError)>) {
     let paths_to_search_in: Vec<&Path> = paths_to_search_in.iter().map(AsRef::as_ref).collect();
 
     trace!("find paths_to_search_in: {:?} find_options: {:?}", paths_to_search_in, find_options);
 
     let mut results = Vec::new();
+    let mut errors = Vec::new();
 
     for path in paths_to_search_in {
         let mut matching_files: Vec<PathBuf> = WalkDir::new(path)
@@ -35,7 +38,7 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
             .into_iter()
             .filter_map(|entry| {
                 if let Err(e) = entry {
-                    info!("Error accessing a file {} ignoring it", e);
+                    info!("Error accessing a file {}", e);
                     return None;
                 }
 
@@ -62,31 +65,35 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
                     // Not sure if this is the right way to go here. Maybe we should actually filter out the file since it errored?
                 }
 
+                let path = entry.path();
+
                 // Checks if all Conditions match the file
                 // If any do not match, the file gets filtered out
-                if find_options.options.iter().all(|option| option.evaluate(&entry).unwrap_or(false)) {
-                    Some(entry.into_path())
+                if find_options.options.iter().all(|option| option.evaluate(&entry).unwrap_or_else(|err| {
+                    errors.push((path.to_path_buf(), err));
+                    false
+                })) {
+                    Some(path.to_path_buf())
                 } else {
                     None
                 }
             })
             .collect();
 
-        if results.len() + matching_files.len() > find_options.max_num_results {
+        results.append(&mut matching_files);
+
+        if results.len() >= find_options.max_num_results {
             // Shorten the vec in case there are too many items so we don't return more
             // paths than we should
-            matching_files.truncate(find_options.max_num_results - results.len());
-            results.append(&mut matching_files);
+            results.truncate(find_options.max_num_results);
 
             debug!("Max amount of results ({}) reached. Exiting early", find_options.max_num_results);
 
             break;
         }
-
-        results.append(&mut matching_files);
     }
 
     debug!("Found {} files", results.len());
 
-    results
+    (results, errors)
 }

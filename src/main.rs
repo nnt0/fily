@@ -649,7 +649,13 @@ fn start() -> Result<(), Box<dyn Error>> {
             let find_options = find_options_builder.build();
             let output_separator = args.value_of("output_separator").unwrap();
 
-            println!("{}", find(&paths_to_search_in, &find_options)
+            let results = find(&paths_to_search_in, &find_options);
+
+            for (path, err) in results.1 {
+                info!("{:?} {}", path.display(), err);
+            }
+
+            println!("{}", results.0
                 .iter()
                 .map(|path| path.display().to_string())
                 .collect::<Vec<String>>()
