@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, io};
+use std::{path::{Path, PathBuf}, io, fmt, error::Error};
 use image::{io::Reader, ImageFormat, ImageError, error::ImageFormatHint};
 use crate::fily_err::{Context, FilyError};
 #[allow(unused_imports)]
@@ -14,6 +14,14 @@ pub enum CheckImageFormatsError {
 
     /// If the path has no extension
     NoPathExtension,
+}
+
+impl Error for CheckImageFormatsError {}
+
+impl fmt::Display for CheckImageFormatsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// Checks if the extension of an image matches the actual format
