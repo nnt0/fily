@@ -1,6 +1,5 @@
 use std::{path::{Path, PathBuf}, error::Error, convert::TryInto};
 use walkdir::WalkDir;
-use rayon::prelude::*;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
@@ -34,9 +33,6 @@ pub fn find<P: AsRef<Path>>(paths_to_search_in: &[P], find_options: &FindOptions
             .max_depth(find_options.max_search_depth)
             .follow_links(find_options.follow_symlinks)
             .into_iter()
-            // Honestly not sure if this is even useful
-            .collect::<Vec<Result<_, _>>>()
-            .into_par_iter()
             .filter_map(|entry| {
                 if let Err(e) = entry {
                     info!("Error accessing a file {} ignoring it", e);
