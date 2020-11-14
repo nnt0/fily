@@ -688,18 +688,18 @@ fn start() -> Result<(), Box<dyn Error>> {
                 result = find_duplicate_files(&files_to_check);
             }
 
+            for (path, err) in result.1 {
+                let (err, err_msg) = err.destructure();
+
+                info!("{:?} {} {}", path.display(), err, err_msg);
+            }
+
             println!("{}", result.0
                 .iter()
                 .map(|duplicates| format!("{}, {}", duplicates.0.display(), duplicates.1.display()))
                 .collect::<Vec<String>>()
                 .join("\n")
             );
-
-            for (path, err) in result.1 {
-                let (err, err_msg) = err.destructure();
-
-                info!("{:?} {} {}", path.display(), err, err_msg);
-            }
         }
         ("move", Some(args)) => {
             let files_to_move = if app.is_present("input_path_separator") {
