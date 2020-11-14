@@ -120,3 +120,24 @@ impl<T, E: Error> Context<T, E> for Result<T, FilyError<E>> {
         self.map_err(|err| err.add_to_context(context().into()))
     }
 }
+
+/// General error for operations on either a path or a filename
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum PathOrFilenameError {
+    /// Path had no filename
+    NoFilename,
+
+    /// A filename had no extension
+    NoExtension,
+
+    /// Failed to convert an `OsString` into a `&str`
+    UTF8ConversionFailed,
+}
+
+impl Error for PathOrFilenameError {}
+
+impl fmt::Display for PathOrFilenameError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
