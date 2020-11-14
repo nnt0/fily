@@ -709,7 +709,11 @@ fn start() -> Result<(), Box<dyn Error>> {
             };
             let move_to = args.value_of("move_to").unwrap();
 
-            move_files(move_to, &files_to_move)?;
+            let paths_with_errors = move_files(move_to, &files_to_move)?;
+
+            for (path, err) in paths_with_errors {
+                info!("Failed to move {:?} {}", path.display(), err);
+            }
         }
         ("similar_images", Some(args)) => {
             let images_to_check = if app.is_present("input_path_separator") {
