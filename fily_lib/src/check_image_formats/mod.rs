@@ -116,7 +116,7 @@ pub enum ImageFormatFromPath {
     NoExtension,
 }
 
-/// Gets the extension of an image for an image from its name
+/// Gets the extension of an image from its name
 pub fn image_format_guess_from_path(path: impl AsRef<Path>) -> ImageFormatFromPath {
     let path = path.as_ref();
 
