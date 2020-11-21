@@ -1,13 +1,19 @@
-use std::convert::TryFrom;
-use thiserror::Error;
+use std::{convert::TryFrom, fmt, error::Error};
 use super::{Condition, SearchCriteria, SearchCriteriaParsingError};
 
 // TODO: All of this
 
-#[derive(Debug, Clone, PartialEq, Error)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ConditionParsingError {
-    #[error("Something went wrong parsing the SearchCriteria")]
     SearchCriteriaParsingError(SearchCriteriaParsingError),
+}
+
+impl Error for ConditionParsingError {}
+
+impl fmt::Display for ConditionParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl From<SearchCriteriaParsingError> for ConditionParsingError {
