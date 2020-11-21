@@ -46,7 +46,8 @@ impl From<regex::Error> for SearchCriteriaParsingError {
 impl TryFrom<&str> for SearchCriteria {
     type Error = SearchCriteriaParsingError;
 
-    /// Expects a criteria in this format: <criteria_name>="<value>"
+    // For some reason the <value> in between the "" doesn't get shown in docs if the backshlash isn't there...
+    /// Expects a criteria in this format: <criteria_name>="\<value>"
     ///
     /// Possible criterias are:
     /// * `filename_exact`
