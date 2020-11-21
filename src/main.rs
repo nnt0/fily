@@ -7,7 +7,7 @@ use regex::Regex;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
-use fily_lib::operations::{
+use fily_lib::{
     rename::rename_files,
     duplicates::{find_duplicate_files, find_duplicate_files_hash},
     find::{find, FindOptionsBuilder, Filename, Filesize, FilePath, Modified, Accessed, Created, Ignore, Condition, SearchCriteria},
