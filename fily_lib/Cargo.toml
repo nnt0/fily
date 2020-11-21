@@ -28,6 +28,6 @@ default = ["check_image_formats", "duplicates", "find", "move_files", "rename", 
 check_image_formats = ["log", "image"]
 duplicates = ["log", "crc32fast"]
 find = ["log", "thiserror", "walkdir", "regex", "filetime"]
-move_files = ["log", "thiserror"]
+move_files = ["log"]
 rename = ["log", "logos"]
 similar_images = ["log", "img_hash", "image"]
