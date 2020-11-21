@@ -1,27 +1,33 @@
-use std::{ffi::OsStr, path::Path, io};
+use std::{ffi::OsStr, path::Path, io, fmt, error::Error};
 use super::RenameFilesError;
 use super::tokenizer::{FilenamePart, FilenameVariable};
-use thiserror::Error;
+use crate::fily_err::FilyError;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum ParseError {
-    #[error("Failed to get the filename because the path either end with .. or there is no final component")]
-    FilenameNoBase,
-    #[error("Failed to get the filename base because there is no filename")]
+    /// Happens when a path ends with "/.."
     NoFilename,
-    #[error("Failed to convert a filename to UTF-8")]
+
+    /// A filename contained non UTF-8 bytes
     UTF8ConversionFailed,
-    #[error("Something went wrong during tokenizing, check your template")]
-    TokenizeErrorInTokens,
-    #[error("Failed to get info on a file")]
+
+    /// Happens when the call to `metadata` fails
     IOError(io::Error),
 }
 
-impl From<ParseError> for RenameFilesError {
-    fn from(error: ParseError) -> Self {
-        Self::ParsingError(error)
+impl Error for ParseError {}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl From<FilyError<ParseError>> for RenameFilesError {
+    fn from(err: FilyError<ParseError>) -> Self {
+        Self::ParsingError(err)
     }
 }
 
@@ -53,17 +59,13 @@ impl Parser {
     ///
     /// Returns an error if either there was a `FilenamePart::Error` in `tokens` or
     /// if something went wrong getting info on a file
-    pub fn parse_filename<'a>(&mut self, tokens: &[FilenamePart<'a>], path: impl AsRef<Path>) -> Result<String, ParseError> {
+    pub fn parse_filename<'a>(&mut self, tokens: &[FilenamePart<'a>], path: impl AsRef<Path>) -> Result<String, FilyError<ParseError>> {
         let mut parsed_filename = String::new();
 
         for token in tokens {
             match *token {
                 FilenamePart::Constant(string) => parsed_filename.push_str(string),
                 FilenamePart::Variable(variable) => parsed_filename.push_str(&self.parse_filename_variable(variable, &path)?),
-                FilenamePart::Error => {
-                    error!("A FilenamePart::Error got into parse_filename");
-                    return Err(ParseError::TokenizeErrorInTokens);
-                }
             };
         }
 
@@ -73,44 +75,26 @@ impl Parser {
     /// Produces a string from a single `FilenameVariable`
     ///
     /// Output may change depending on where `path` points to
-    fn parse_filename_variable(&mut self, variable: FilenameVariable, path: impl AsRef<Path>) -> Result<String, ParseError> {
+    fn parse_filename_variable(&mut self, variable: FilenameVariable, path: impl AsRef<Path>) -> Result<String, FilyError<ParseError>> {
         let path = path.as_ref();
         Ok(match variable {
             FilenameVariable::Filename => path.file_name()
-                .ok_or_else(|| {
-                    info!("Can't get filename of {:?} no base", path.display());
-                    ParseError::FilenameNoBase
-                })?
+                .ok_or_else(|| FilyError::new_with_context(ParseError::NoFilename, || format!("Can't get filename of {:?}", path.display())))?
                 .to_str()
-                .ok_or_else(|| {
-                    info!("Can't convert {:?} to UTF-8", path.display());
-                    ParseError::UTF8ConversionFailed
-                })?
+                .ok_or_else(|| FilyError::new_with_context(ParseError::UTF8ConversionFailed, || format!("Can't convert {:?} to UTF-8", path.display())))?
                 .to_string(),
             FilenameVariable::FilenameBase => path.file_stem()
-                .ok_or_else(|| {
-                    info!("Can't get filename of {:?} no filename", path.display());
-                    ParseError::NoFilename
-                })?
+                .ok_or_else(|| FilyError::new_with_context(ParseError::NoFilename, || format!("Can't get filename of {:?}", path.display())))?
                 .to_str()
-                .ok_or_else(|| {
-                    info!("Can't convert {:?} to UTF-8", path.display());
-                    ParseError::UTF8ConversionFailed
-                })?
+                .ok_or_else(|| FilyError::new_with_context(ParseError::UTF8ConversionFailed, || format!("Can't convert {:?} to UTF-8", path.display())))?
                 .to_string(),
             FilenameVariable::FilenameExtension => path.extension()
                 .unwrap_or_else(|| OsStr::new(""))
                 .to_str()
-                .ok_or_else(|| {
-                    info!("Can't convert {:?} to UTF-8", path.display());
-                    ParseError::UTF8ConversionFailed
-                })?
+                .ok_or_else(|| FilyError::new_with_context(ParseError::UTF8ConversionFailed, || format!("Can't convert {:?} to UTF-8", path.display())))?
                 .to_string(),
             FilenameVariable::FileSize => path.metadata()
-                .map_err(|e| {
-                    info!("Failed to get size of {:?} {}", path.display(), e);
-                    ParseError::IOError(e)
-                })?
+                .map_err(|e| FilyError::new_with_context(ParseError::IOError(e), || format!("Failed to get size of {:?}", path.display())))?
                 .len()
                 .to_string(),
             FilenameVariable::IncrementingNumber => {

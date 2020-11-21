@@ -1,20 +1,27 @@
-use std::{fs::rename, path::Path};
-use thiserror::Error;
+use std::{fs::rename, path::Path, fmt, error::Error};
+use crate::fily_err::FilyError;
 #[allow(unused_imports)]
 use log::{trace, debug, info, warn, error};
 
 mod tokenizer;
-use tokenizer::{tokenize, FilenamePart, TokenizeError};
+use tokenizer::{FilenamePart, TokenizeError, FilenameOptions, OptionsParseError};
 
 mod parser;
 use parser::{Parser, ParseError};
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum RenameFilesError {
-    #[error("Something went wrong during tokenizing")]
-    TokenizeError(TokenizeError),
-    #[error("Something went wrong during parsing")]
-    ParsingError(ParseError),
+    TokenizeError(FilyError<TokenizeError>),
+    ParsingError(FilyError<ParseError>),
+    OptionsParsingError(FilyError<OptionsParseError>),
+}
+
+impl Error for RenameFilesError {}
+
+impl fmt::Display for RenameFilesError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// Renames all files based on a template
@@ -43,20 +50,21 @@ pub fn rename_files<P: AsRef<Path>>(files_to_rename: &[P], new_filename_template
 
     trace!("rename_files files_to_rename: {:?} new_filename_template: {}", files_to_rename, new_filename_template);
 
-    let (filename_tokenized, options) = tokenize(new_filename_template);
+    let text_template_and_options: Vec<&str> = new_filename_template.splitn(2, '|').collect();
+    let text_template = text_template_and_options[0];
 
-    if filename_tokenized.contains(&FilenamePart::Error) {
-        info!("Tokenize error");
-        // TODO: This should just return the actual Error but we have to wait until Logos supports returning actual errors
-        return Err(RenameFilesError::TokenizeError(TokenizeError::UnknownError));
-    }
+    let filename_template = FilenamePart::from_text(text_template)?;
 
-    let options = options?;
+    let options = if let Some(text_options) = text_template_and_options.get(1) {
+        FilenameOptions::new(text_options)?
+    } else {
+        FilenameOptions::default()
+    };
 
     let mut parser = Parser::builder().incrementing_number(options.incrementing_number_starts_at).build();
 
     for path in files_to_rename {
-        let filename_new = match parser.parse_filename(&filename_tokenized, &path) {
+        let filename_new = match parser.parse_filename(&filename_template, &path) {
             Ok(filename) => filename,
             Err(e) => {
                 info!("parse_filename failed {}", e);
