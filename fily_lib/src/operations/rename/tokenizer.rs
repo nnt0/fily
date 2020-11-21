@@ -34,7 +34,7 @@ impl From<FilyError<TokenizeError>> for RenameFilesError {
 pub enum FilenameToken<'a> {
     #[regex("[^{}]+")]
     Constant(&'a str),
-    #[regex(r"\{[^{}]*\}", |var| { let var = var.slice(); &var[1..var.len()] })]
+    #[regex(r"\{[^{}]*\}", |var| { let var = var.slice(); &var[1..var.len() - 1] })]
     Variable(&'a str),
     #[error]
     Error,
