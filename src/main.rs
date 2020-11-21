@@ -750,7 +750,13 @@ fn start() -> Result<(), Box<dyn Error>> {
 
             similar_images_options.threshold = args.value_of("threshold").unwrap().parse().unwrap();
 
-            println!("{}", find_similar_images(&images_to_check, similar_images_options)
+            let results = find_similar_images(&images_to_check, similar_images_options);
+
+            for (path, err) in results.1 {
+                info!("{} {:?}", err, path.display());
+            }
+
+            println!("{}", results.0
                 .iter()
                 .map(|similar_images| format!("{}, {}", similar_images.0.display(), similar_images.1.display()))
                 .collect::<Vec<String>>()
