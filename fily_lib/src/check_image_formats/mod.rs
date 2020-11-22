@@ -130,7 +130,6 @@ pub fn image_format_guess_from_path(path: impl AsRef<Path>) -> ImageFormatFromPa
             // return ImageFormatHint::PathExtension or ImageFormatHint::Unknown but I don't know if
             // this is always going to stay this way so it may be possible that this breaks at some point
             // if I update the image crate. I dislike this piece of code.
-            // TODO: Write a test for this
             ImageError::Unsupported(unsupported_e) => match unsupported_e.format_hint() {
                 ImageFormatHint::PathExtension(ext) => ImageFormatFromPath::UnknownFormat(ext),
                 ImageFormatHint::Unknown => ImageFormatFromPath::NoExtension,
