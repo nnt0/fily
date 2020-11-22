@@ -34,7 +34,7 @@ impl<T: Error> fmt::Display for FilyError<T> {
     }
 }
 
-impl<T: Error> From<T> for  FilyError<T> {
+impl<T: Error> From<T> for FilyError<T> {
     fn from(err: T) -> Self {
         FilyError::new(err, "")
     }
