@@ -33,7 +33,7 @@ Also, if you use any operation besides `find` without piping the input it will j
 
 ### find
 
-`find`s files based on criteria you specify. You can add a lot of different criterias that the file has to match. Prints canonicalized paths to the files that match, separated by a new line, to stdout. You can change the separator if you need it.
+`find`s files based on criteria you specify. You can add a lot of different criterias that the file has to match. Prints paths to the files that match, separated by a new line, to stdout. You can change the separator if you need it.
 
 ### rename
 
