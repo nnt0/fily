@@ -64,10 +64,10 @@ impl<'a> FilenamePart<'a> {
             .map(|token| Ok(match token {
                 FilenameToken::Constant(string) => FilenamePart::Constant(string),
                 FilenameToken::Variable(var) => FilenamePart::Variable(FilenameVariable::from_text(var)?),
-                _ => unreachable!("Error variant in vec after checking for it"),
-        })).collect();
+                FilenameToken::Error => unreachable!("Error variant in vec after checking for it"),
+            })).collect();
 
-        Ok(result?)
+        result
     }
 }
 
