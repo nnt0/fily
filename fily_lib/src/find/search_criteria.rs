@@ -1,5 +1,4 @@
-use std::{num::ParseIntError, convert::TryFrom};
-use thiserror::Error;
+use std::{num::ParseIntError, convert::TryFrom, error::Error, fmt};
 
 /// Used to specify a criteria a file has to match
 ///
@@ -17,18 +16,30 @@ pub enum SearchCriteria {
     Created(Created)
 }
 
-#[derive(Error, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SearchCriteriaParsingError {
-    #[error("The criteria is missing the =\"<value>\" part")]
+    /// The criteria is missing the =\"<value>\" part
     NoValue,
-    #[error("There is at least one missing double quote at the start or the end of the value")]
+
+    /// There is at least one missing double quote at the start or the end of the value
     MissingDoubleQuotes,
-    #[error("The criteria passed isn't known")]
+
+    /// The criteria passed isn't known
     UnknownCriteria,
-    #[error("Error parsing the value to a number")]
+
+    /// Error parsing the value to a number
     MalformedNumber,
-    #[error("Error parsing the regex")]
+
+    /// Error parsing the regex
     MalformedRegex(regex::Error),
+}
+
+impl Error for SearchCriteriaParsingError {}
+
+impl fmt::Display for SearchCriteriaParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl From<ParseIntError> for SearchCriteriaParsingError {
