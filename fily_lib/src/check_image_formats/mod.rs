@@ -36,7 +36,7 @@ impl fmt::Display for CheckImageFormatsError {
 /// This function can work on files that are not actually images without creating an error. There is no guarantee that it'll report
 /// the right thing in this case. For example, it'll report .wav files as a false positive saying that they should have the
 /// the .webp extension.
-pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> (Vec<(&Path, String, String)>, Vec<(&Path, CheckImageFormatsError)>) {
+pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> (Vec<(&Path, &'static str, &'static str)>, Vec<(&Path, CheckImageFormatsError)>) {
     let images_to_check: Vec<&Path> = images_to_check.iter().map(AsRef::as_ref).collect();
 
     trace!("check_image_formats images_to_check: {:?}", images_to_check);
@@ -66,8 +66,8 @@ pub fn check_image_formats<P: AsRef<Path>>(images_to_check: &[P]) -> (Vec<(&Path
         };
 
         if format != format_from_path {
-            let is_format = format_from_path.to_string();
-            let should_be_format = format.to_string();
+            let is_format = format_from_path;
+            let should_be_format = format;
 
             images_with_wrong_extensions.push((path, is_format, should_be_format));
         }
