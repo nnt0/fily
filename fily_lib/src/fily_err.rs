@@ -92,6 +92,7 @@ impl<T: Error> FilyError<T> {
 pub trait Context<T, E: Error> {
     #[allow(clippy::missing_errors_doc)]
     fn context(self, context: impl Into<String>) -> Result<T, FilyError<E>>;
+
     #[allow(clippy::missing_errors_doc)]
     fn with_context<U: Into<String>, F: Fn() -> U>(self, context: F) -> Result<T, FilyError<E>>;
 }

@@ -203,8 +203,10 @@ impl FileWithHash<'_> {
         if let Some(hash) = self.hash {
             Ok(hash)
         } else {
-            self.hash = Some(crc32_of_file(self.path)
-                .with_context(|| format!("Couldn't read contents of {:?}", self.path.display()))?);
+            self.hash = Some(
+                crc32_of_file(self.path)
+                    .with_context(|| format!("Couldn't read contents of {:?}", self.path.display()))?
+            );
 
             Ok(*self.hash.as_ref().unwrap())
         }
@@ -224,7 +226,7 @@ pub fn get_len_of_file(path: impl AsRef<Path>) -> Result<u64, FilyError<io::Erro
         .map(|metadata| metadata.len())
 }
 
-/// Calculates the crc32 of a bytes slice
+/// Calculates the crc32 of a byte slice
 #[must_use]
 pub fn crc32_from_bytes(bytes: &[u8]) -> u32 {
     let mut hasher = Hasher::new();

@@ -11,7 +11,7 @@ pub enum MoveFilesError {
     /// Failed to get the filename of a file
     FileWithoutFilename,
 
-    /// If it fails a io operation
+    /// If an io operation fails
     IOError(io::Error),
 }
 
