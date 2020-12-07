@@ -26,6 +26,59 @@ pub enum Condition<T> {
     Value(T),
 }
 
+impl<T> Condition<T> {
+    /// Build a `Condition` that requires all of the `criterias` to match
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `criterias` is empty
+    pub fn build_all_of_condition(mut criterias: Vec<T>) -> Self {
+        assert!(!criterias.is_empty());
+
+        let mut condition = Box::from(Condition::Value(criterias.remove(0)));
+
+        for criteria in criterias {
+            condition = Box::from(Condition::And(Box::from(Condition::Value(criteria)), condition));
+        }
+
+        *condition
+    }
+
+    /// Build a `Condition` that requires any (at least one) of the `criterias` to match
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `criterias` is empty
+    pub fn build_any_of_condition(mut criterias: Vec<T>) -> Self {
+        assert!(!criterias.is_empty());
+
+        let mut condition = Box::from(Condition::Value(criterias.remove(0)));
+
+        for criteria in criterias {
+            condition = Box::from(Condition::Or(Box::from(Condition::Value(criteria)), condition));
+        }
+
+        *condition
+    }
+
+    /// Build a `Condition` that requires none of the `criterias` to match
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `criterias` is empty
+    pub fn build_none_of_condition(mut criterias: Vec<T>) -> Self {
+        assert!(!criterias.is_empty());
+
+        let mut condition = Box::from(Condition::Not(Box::from(Condition::Value(criterias.remove(0)))));
+
+        for criteria in criterias {
+            condition = Box::from(Condition::And(Box::from(Condition::Not(Box::from(Condition::Value(criteria)))), condition));
+        }
+
+        *condition
+    }
+}
+
 #[derive(Debug)]
 pub enum ConditionEvalError {
     PathErr(FilyError<PathOrFilenameError>),
