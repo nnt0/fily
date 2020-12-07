@@ -90,50 +90,35 @@ impl FindOptionsBuilder {
     }
 
     /// Adds a condition that requires all of the search criterias in `search_criterias` to match
-    pub fn add_all_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
+    pub fn add_all_of_condition(&mut self, search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
 
-        let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
+        self.find_options.options.push(Condition::build_all_of_condition(search_criterias));
 
-        for criteria in search_criterias {
-            option = Box::from(Condition::And(Box::from(Condition::Value(criteria)), option));
-        }
-
-        self.find_options.options.push(*option);
         self
     }
 
     /// Adds a condition that requires any (at least one) of the search criterias in `search_criterias` to match
-    pub fn add_any_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
+    pub fn add_any_of_condition(&mut self, search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
 
-        let mut option = Box::from(Condition::Value(search_criterias.remove(0)));
+        self.find_options.options.push(Condition::build_any_of_condition(search_criterias));
 
-        for criteria in search_criterias {
-            option = Box::from(Condition::Or(Box::from(Condition::Value(criteria)), option));
-        }
-
-        self.find_options.options.push(*option);
         self
     }
 
     /// Adds a condition that requires none of the search criterias in `search_criterias` to match
-    pub fn add_nothing_of_condition(&mut self, mut search_criterias: Vec<SearchCriteria>) -> &mut Self {
+    pub fn add_none_of_condition(&mut self, search_criterias: Vec<SearchCriteria>) -> &mut Self {
         if search_criterias.is_empty() {
             return self;
         }
 
-        let mut option = Box::from(Condition::Not(Box::from(Condition::Value(search_criterias.remove(0)))));
+        self.find_options.options.push(Condition::build_none_of_condition(search_criterias));
 
-        for criteria in search_criterias {
-            option = Box::from(Condition::And(Box::from(Condition::Not(Box::from(Condition::Value(criteria)))), option));
-        }
-
-        self.find_options.options.push(*option);
         self
     }
 
