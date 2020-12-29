@@ -21,6 +21,11 @@ pub mod similar_images;
 #[cfg(feature = "check_image_formats")]
 pub mod check_image_formats;
 
+#[cfg(feature = "delete")]
+pub mod delete;
+
+// mod free_functions;
+
 pub mod fily_err;
 
 #[cfg(test)]
