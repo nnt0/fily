@@ -65,6 +65,10 @@ Prints the paths to any duplicate file it found like this `path/to/duplicate1, p
 
 `move`s every file to a different folder
 
+### delete
+
+`delete`s every file you pass to it. This subcommand has one option with which you can choose if the file should be overwritte with zeroes before it should be deleted.
+
 ### check_image_formats
 
 Checks if the extension of the filename of a picture is the same as its actual format. If it isn't it prints `path/to/file, extension_format, file_format` for every file it found to stdout.

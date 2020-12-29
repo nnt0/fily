@@ -11,6 +11,10 @@ use fily_lib::{
 pub enum Subcommand {
     CheckImageFormats,
 
+    Delete {
+        safe_delete_files: bool,
+    },
+
     Duplicates {
         use_hash_version: bool,
     },
@@ -465,6 +469,19 @@ impl CLIOptions {
                     .setting(AppSettings::WaitOnError)
                     .setting(AppSettings::UnifiedHelpMessage)
             )
+            .subcommand(
+                SubCommand::with_name("delete")
+                    .about("Deletes files and folders")
+                    .setting(AppSettings::DeriveDisplayOrder)
+                    .setting(AppSettings::WaitOnError)
+                    .setting(AppSettings::UnifiedHelpMessage)
+                    .arg(
+                        Arg::with_name("safe_delete")
+                            .short("s")
+                            .long("safe_delete")
+                            .help("Overwrite files with zeroes first, then deletes them")
+                    )
+            )
             .get_matches();
 
         let subcommand = match app.subcommand() {
@@ -818,6 +835,13 @@ impl CLIOptions {
                 }
             }
             ("check_image_formats", _) => Subcommand::CheckImageFormats,
+            ("delete", Some(args)) => {
+                let safe_delete_files = args.is_present("safe_delete");
+
+                Subcommand::Delete {
+                    safe_delete_files,
+                }
+            }
             _ => return Err("Unknown Subcommand"),
         };
 

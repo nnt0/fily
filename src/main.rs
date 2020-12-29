@@ -12,6 +12,7 @@ use fily_lib::{
     move_files::move_files,
     similar_images::{find_similar_images, SimilarImagesOptions},
     check_image_formats::check_image_formats,
+    delete::{delete, safe_delete},
 };
 
 mod cli_options;
@@ -196,6 +197,31 @@ fn start() -> Result<(), Box<dyn Error>> {
                 .collect::<Vec<String>>()
                 .join("\n")
             );
+        }
+        Subcommand::Delete {
+            safe_delete_files,
+        } => {
+            let paths_to_delete = if let Some(separator) = options.input_path_separator {
+                get_stdin_split(&separator)?
+            } else {
+                get_stdin_as_lines()?
+            };
+
+            if safe_delete_files {
+                for path in paths_to_delete {
+                    match safe_delete(&path) {
+                        Ok(()) => info!("Safe deleted {:?}", path),
+                        Err(e) => info!("Error while safe deleting {:?} {}", path, e),
+                    }
+                }
+            } else {
+                for path in paths_to_delete {
+                    match delete(&path) {
+                        Ok(()) => info!("Deleted {:?}", path),
+                        Err(e) => info!("Error deleting {:?} {}", path, e),
+                    }
+                }
+            }
         }
     };
 
