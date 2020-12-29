@@ -65,7 +65,8 @@ impl From<FilyError<image::ImageError>> for HashImageError {
 }
 
 fn hash_image(path: &Path, hasher: &img_hash::Hasher) -> Result<img_hash::ImageHash, HashImageError> {
-    let reader = Reader::open(path).with_context(|| format!("Failed to open {:?}", path.display()))?
+    let reader = Reader::open(path)
+        .with_context(|| format!("Failed to open {:?}", path.display()))?
         .with_guessed_format()
         .with_context(|| format!("Failed to guess image format {:?}", path.display()))?;
 
