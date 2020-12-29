@@ -35,7 +35,7 @@ impl From<FilyError<ParseError>> for RenameFilesError {
 ///
 /// Use `Parser::builder` to build or instantiate directly with `Default` or `Parser::new` if you don't need to change
 /// the starting point of the incrementing number from 0
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct Parser {
     incrementing_number: isize,
 }
@@ -107,7 +107,7 @@ impl Parser {
 }
 
 /// Used to build a `Parser`
-#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct ParserBuilder {
     parser: Parser,
 }
