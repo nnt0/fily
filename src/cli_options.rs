@@ -83,7 +83,7 @@ impl CLIOptions {
                     .takes_value(false)
                     .short("s")
                     .long("strict_logging")
-                    .help("Don't run if logging fails for some reason and panic instead before doing anything. This is a failsafe if you need to make sure that actions are always recorded. This can also be set by creating an environment variable called FILY_STRICT_LOGGING")
+                    .help("Don't run if logging fails for some reason and stop instead before doing anything. This is a failsafe if you need to make sure that actions are always recorded. This can also be set by creating an environment variable called FILY_STRICT_LOGGING")
             )
             .arg(
                 Arg::with_name("input_path_separator")
