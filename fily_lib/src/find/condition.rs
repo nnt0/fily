@@ -32,6 +32,7 @@ impl<T> Condition<T> {
     /// # Panics
     ///
     /// This function panics if `criterias` is empty
+    #[must_use]
     pub fn build_all_of_condition(mut criterias: Vec<T>) -> Self {
         assert!(!criterias.is_empty());
 
@@ -49,6 +50,7 @@ impl<T> Condition<T> {
     /// # Panics
     ///
     /// This function panics if `criterias` is empty
+    #[must_use]
     pub fn build_any_of_condition(mut criterias: Vec<T>) -> Self {
         assert!(!criterias.is_empty());
 
@@ -66,6 +68,7 @@ impl<T> Condition<T> {
     /// # Panics
     ///
     /// This function panics if `criterias` is empty
+    #[must_use]
     pub fn build_none_of_condition(mut criterias: Vec<T>) -> Self {
         assert!(!criterias.is_empty());
 
