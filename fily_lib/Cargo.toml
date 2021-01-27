@@ -13,7 +13,7 @@ description = "Provides functions that do stuff with files"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = { version = "0.4.13", optional = true }
+log = { version = "0.4.14", optional = true }
 regex = { version = "1.4.3", optional = true }
 logos = { version = "0.11.4", optional = true }
 walkdir = { version = "2.3.1", optional = true }
