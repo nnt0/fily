@@ -15,7 +15,7 @@ description = "Provides functions that do stuff with files"
 [dependencies]
 log = { version = "0.4.14", optional = true }
 regex = { version = "1.4.3", optional = true }
-logos = { version = "0.11.4", optional = true }
+logos = { version = "0.12.0", optional = true }
 walkdir = { version = "2.3.1", optional = true }
 img_hash = { version = "3.1.0", optional = true }
 image = { version = "0.23.12", optional = true }
