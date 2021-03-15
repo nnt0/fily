@@ -218,9 +218,9 @@ dependencies = [
 
 [[package]]
 name = "img_hash"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8df6c5bc88f37a165c63143e38924f691246fc77f12de0cbd126fe0c8ca3527b"
+checksum = "52057a4b155b3cc36b9cd5b20faaa60f506e39727efcffad7d090f0163fe0c6d"
 dependencies = [
  "base64",
  "image",
