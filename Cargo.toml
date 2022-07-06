@@ -16,7 +16,7 @@ clap = "2.34.0"
 log = "0.4.14"
 fern = "0.6.0"
 chrono = "0.4.15"
-regex = "1.5.4"
+regex = "1.6.0"
 
 [profile.release]
 lto = true
