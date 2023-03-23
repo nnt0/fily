@@ -14,7 +14,7 @@ categories = ["command-line-utilities", "filesystem"]
 fily_lib = { path = "fily_lib" }
 clap = "2.34.0"
 log = "0.4.14"
-fern = "0.6.0"
+fern = "0.6.2"
 chrono = "0.4.15"
 regex = "1.5.4"
 
